@@ -58,6 +58,11 @@ jobs:
           echo "ZIP_FILE=dist/$ZIP_NAME" >> $GITHUB_ENV
           echo "SHA_FILE=dist/$ZIP_NAME.sha256" >> $GITHUB_ENV
 
+      - name: Create Unversioned Artifact Copy
+        run: |
+          cp "dist/orthoswift-webodm-plugin-v${{ steps.get_version.outputs.VERSION }}.zip" "dist/orthoswift-webodm-plugin.zip"
+          cp "dist/orthoswift-webodm-plugin-v${{ steps.get_version.outputs.VERSION }}.zip.sha256" "dist/orthoswift-webodm-plugin.zip.sha256"
+
       - name: Upload Workflow Artifacts
         uses: actions/upload-artifact@v4
         with:
