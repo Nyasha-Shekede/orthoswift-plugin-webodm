@@ -12,7 +12,7 @@ def main():
     version_vars = {}
     if version_file.exists():
         exec(version_file.read_text(encoding="utf-8"), version_vars)
-    version = version_vars.get("__version__", "4.5.3")
+    version = version_vars.get("__version__", "1.0.0")
 
     zip_name = f"orthoswift-webodm-plugin-v{version}.zip"
     zip_path = dist_dir / zip_name

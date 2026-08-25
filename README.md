@@ -18,7 +18,7 @@ The plugin declares its Python dependencies in `orthoswift/requirements.txt`; We
 
 ### Install the release ZIP
 
-1. Download `orthoswift-plugin-webodm.zip` from the GitHub release.
+1. Download `orthoswift-webodm-plugin-v1.0.0.zip` from the GitHub release.
 2. In WebODM, open **Administration → Plugins**.
 3. Select **Load Plugin (.zip)** and upload the ZIP.
 4. Enable **OrthoSWIFT**. WebODM installs the declared Python dependencies.
@@ -135,4 +135,4 @@ Issues: https://github.com/orthoswift/orthoswift-plugin-webodm/issues
 
 ## Version
 
-4.5.3
+1.0.0
