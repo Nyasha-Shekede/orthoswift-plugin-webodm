@@ -1,0 +1,350 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+/* ─── Design Tokens (Grey & White Homepage Theme) ─────────────────────────── */
+.osw-shell {
+  --bg:          #5a5a5a;   /* medium grey background */
+  --fg:          #ffffff;   /* crisp white text */
+  --fg-muted:    rgba(255, 255, 255, 0.75);
+  --border:      rgba(255, 255, 255, 0.2);
+  --green:       #4ade80;   /* green-400 — deliverable names ONLY */
+  --input-bg:    rgba(0, 0, 0, 0.35);
+  --radius:      0.75rem;
+
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-optical-sizing: auto;
+  letter-spacing: -0.011em;
+  background: var(--bg);
+  color: var(--fg);
+  min-height: 100vh;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 36px 40px 80px;
+}
+
+/* ─── Hero ──────────────────────────────────────────────────────────────────── */
+.osw-hero {
+  padding: 0 0 20px;
+  margin-bottom: 24px;
+}
+.osw-hero h1 {
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  font-style: italic;
+  color: #ffffff;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+}
+.osw-hero p {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ─── Deliverables Table (Directly on Background) ─────────────────────────── */
+.osw-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  margin-bottom: 32px;
+}
+.osw-table {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+.osw-table thead tr {
+  border-bottom: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.6);
+}
+.osw-table thead th {
+  padding: 14px 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+.osw-table thead th:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+.osw-table tbody tr {
+  transition: background 0.15s;
+}
+.osw-table tbody tr:not(:last-child) {
+  border-bottom: 1px solid var(--border);
+}
+.osw-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.osw-table td { padding: 14px 20px; }
+.osw-table td:not(:last-child) { border-right: 1px solid var(--border); }
+.osw-td-label {
+  font-weight: 600;
+  color: var(--green);     /* green-400 — exactly as on homepage */
+  white-space: nowrap;
+  width: 24%;
+}
+.osw-td-format {
+  font-weight: 600;
+  color: #ffffff;
+  width: 36%;
+}
+.osw-td-use {
+  color: var(--fg-muted);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ─── Form & Sections (No Outer Card) ──────────────────────────────────────── */
+.osw-section {
+  margin-bottom: 32px;
+}
+.osw-section h2 {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 16px;
+  letter-spacing: -0.01em;
+}
+
+/* ─── Grid ──────────────────────────────────────────────────────────────────── */
+.osw-grid { display: grid; gap: 16px; max-width: 720px; }
+.osw-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* ─── Labels & Inputs ───────────────────────────────────────────────────────── */
+.osw-shell label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #ffffff;
+  max-width: 720px;
+}
+.osw-shell input,
+.osw-shell select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  color: #ffffff;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.osw-shell input[type=file] {
+  max-width: 440px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.osw-shell input[type=file]::file-selector-button {
+  background: #ffffff;
+  color: #000000;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-weight: 700;
+  font-size: 11px;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: background-color 0.15s;
+}
+.osw-shell input[type=file]::file-selector-button:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+.osw-shell input:focus,
+.osw-shell select:focus {
+  outline: none;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}
+.osw-shell small,
+.osw-help {
+  font-weight: 400;
+  color: var(--fg-muted);
+  font-size: 11px;
+  margin: 0;
+}
+
+/* ─── Checkbox row ──────────────────────────────────────────────────── */
+.osw-check {
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+}
+.osw-check input[type=checkbox] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: #ffffff;
+}
+.osw-check span { display: flex; flex-direction: column; gap: 3px; }
+
+/* ─── Advanced options panel ────────────────────────────────────────── */
+.osw-advanced {
+  margin-top: 20px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.osw-advanced summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-muted);
+  user-select: none;
+  margin-bottom: 0;
+  transition: color 0.15s;
+}
+.osw-advanced summary:hover { color: #ffffff; }
+.osw-advanced summary .osw-chevron {
+  width: 14px; height: 14px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.osw-advanced[open] summary { color: #ffffff; margin-bottom: 16px; }
+.osw-advanced[open] summary .osw-chevron { transform: rotate(180deg); }
+
+/* ─── Actions & Buttons (Solid White, Black Text) ─────────────────── */
+.osw-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+.osw-shell button {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 13px 28px;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+.osw-shell button:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+.osw-shell button:disabled {
+  cursor: wait;
+  transform: none;
+}
+#osw-run {
+  display: none;
+}
+#osw-run.state-running {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.6);
+  box-shadow: 0 0 16px rgba(74, 222, 128, 0.25);
+  animation: osw-flicker 1.2s infinite ease-in-out;
+}
+@keyframes osw-flicker {
+  0%   { opacity: 1;    box-shadow: 0 0 14px rgba(74, 222, 128, 0.25); }
+  25%  { opacity: 0.65; box-shadow: 0 0 6px  rgba(74, 222, 128, 0.08); }
+  50%  { opacity: 1;    box-shadow: 0 0 26px rgba(74, 222, 128, 0.5); }
+  75%  { opacity: 0.78; box-shadow: 0 0 10px rgba(74, 222, 128, 0.18); }
+  100% { opacity: 1;    box-shadow: 0 0 14px rgba(74, 222, 128, 0.25); }
+}
+#osw-run.state-success {
+  background: #16a34a;
+  color: #ffffff;
+  border: 1px solid #22c55e;
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.35);
+  cursor: pointer;
+}
+#osw-run.state-success:hover {
+  background: #15803d;
+  box-shadow: 0 6px 24px rgba(34, 197, 94, 0.5);
+  transform: translateY(-1px);
+}
+#osw-run.state-error {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* ─── Status & Logs ─────────────────────────────────────────────────── */
+.osw-status {
+  font-size: 12px;
+  color: var(--fg-muted);
+  display: none;
+}
+.osw-status.error {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: calc(var(--radius) - 2px);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.osw-box {
+  display: none;
+  margin-top: 14px;
+  padding: 14px 18px;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 720px;
+  box-sizing: border-box;
+}
+.osw-box.error {
+  display: block;
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.4);
+  color: #fca5a5;
+}
+.osw-box.success {
+  display: block;
+  background: rgba(74,222,128,0.15);
+  border: 1px solid rgba(74,222,128,0.4);
+  color: #86efac;
+}
+.osw-box.running {
+  display: block;
+  background: rgba(251,191,36,0.15);
+  border: 1px solid rgba(251,191,36,0.4);
+  color: #fde047;
+}
+
+.osw-shell pre {
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  padding: 16px;
+  font-size: 11px;
+  color: #ffffff;
+  line-height: 1.6;
+}
+
+/* ─── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .osw-grid.two { grid-template-columns: 1fr; }
+  .osw-actions { flex-direction: column; align-items: stretch; }
+  .osw-actions button { width: 100%; }
+  .osw-td-label { white-space: normal; }
+  .osw-shell { padding: 24px 20px 64px; }
+}

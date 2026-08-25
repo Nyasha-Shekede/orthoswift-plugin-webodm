@@ -1,0 +1,64 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: orthoswift/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r orthoswift/requirements.txt pytest ruff bandit
+
+      - name: Run Test Suite
+        run: python -m pytest -q
+
+      - name: Run Lint and Security Audits
+        run: |
+          python -m ruff check orthoswift tests --select E9,F
+          python -m bandit -q -r orthoswift -x tests -lll
+
+      - name: Extract Version
+        id: get_version
+        run: |
+          TAG_OR_REF="${{ github.ref_name }}"
+          echo "VERSION=${TAG_OR_REF#v}" >> $GITHUB_OUTPUT
+
+      - name: Package WebODM Plugin Release ZIP
+        run: |
+          python build_release.py
+          ZIP_NAME="orthoswift-webodm-plugin-v${{ steps.get_version.outputs.VERSION }}.zip"
+          echo "ZIP_NAME=dist/$ZIP_NAME" >> $GITHUB_ENV
+
+          sha256sum "$ZIP_NAME" > "${ZIP_NAME}.sha256"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          name: "OrthoSWIFT WebODM Plugin ${{ steps.get_version.outputs.VERSION }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            ${{ env.ZIP_NAME }}
+            ${{ env.ZIP_NAME }}.sha256

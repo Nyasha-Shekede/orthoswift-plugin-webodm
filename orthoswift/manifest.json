@@ -1,0 +1,17 @@
+{
+  "name": "OrthoSWIFT",
+  "webodmMinVersion": "2.5.0",
+  "description": "Turn multispectral orthomosaics into variable-rate prescriptions for fertilizer and spot spraying without manual GIS work.",
+  "version": "1.0.0",
+  "author": "Nyasha Shekede",
+  "email": "",
+  "repository": "https://github.com/orthoswift/orthoswift-plugin-webodm",
+  "tags": [
+    "agriculture",
+    "multispectral",
+    "prescription"
+  ],
+  "homepage": "https://orthoswift.net",
+  "experimental": true,
+  "deprecated": false
+}
