@@ -58,5 +58,5 @@ def test_plugin_manifest_and_assets_are_consistent():
     exec((root/'orthoswift/version.py').read_text(),version)
     assert manifest['version']==version['__version__']
     assert manifest['repository'].startswith('https://github.com/')
-    assert not (root/'orthoswift/public/main.js').exists()
+    assert (root/'orthoswift/public/main.js').exists()
     assert (root/'orthoswift/templates/index.html').exists()
