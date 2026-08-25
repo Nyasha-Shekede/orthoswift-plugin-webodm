@@ -41,10 +41,16 @@ def main():
                 zf.write(doc_path, arcname=f"orthoswift/{doc}")
                 print(f"  + orthoswift/{doc}")
 
-    # Generate SHA-256 Checksum
+    # Generate SHA-256 Checksum for versioned ZIP
     sha256 = hashlib.sha256(zip_path.read_bytes()).hexdigest()
     sha_file = dist_dir / f"{zip_name}.sha256"
     sha_file.write_text(f"{sha256}  {zip_name}\n", encoding="utf-8")
+
+    # Also create unversioned bundle for convenience
+    generic_zip = dist_dir / "orthoswift-plugin-webodm.zip"
+    generic_zip.write_bytes(zip_path.read_bytes())
+    generic_sha = dist_dir / "orthoswift-plugin-webodm.zip.sha256"
+    generic_sha.write_text(f"{sha256}  orthoswift-plugin-webodm.zip\n", encoding="utf-8")
 
     size_kb = zip_path.stat().st_size / 1024
 
