@@ -31,7 +31,7 @@ Do not install this by restarting NodeODM alone. The plugin runs in WebODM and i
 Clone the repository, then copy or link the `orthoswift/` directory into WebODM's `plugins/` directory. Enable it from **Administration → Plugins**.
 
 ```bash
-git clone https://github.com/orthoswift/orthoswift-plugin-webodm.git
+git clone https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm.git
 ```
 
 ## Usage
@@ -131,7 +131,7 @@ MIT License. See `LICENSE`.
 
 ## Support
 
-Issues: https://github.com/orthoswift/orthoswift-plugin-webodm/issues
+Issues: https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm/issues
 
 ## Version
 
