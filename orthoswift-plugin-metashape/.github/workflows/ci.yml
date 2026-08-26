@@ -1,0 +1,82 @@
+name: Metashape Plugin CI & Package
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Root requirements.txt has all runtime deps (reportlab, scikit-learn, etc.)
+          pip install -r requirements.txt pytest
+
+      - name: Verify Metashape Plugin imports
+        run: |
+          python -c "
+          import orthoswift
+          assert hasattr(orthoswift, 'run_agriculture_pipeline'), 'Missing run_agriculture_pipeline'
+          assert hasattr(orthoswift, 'run'), 'Missing run'
+          print('Import validation: OK')
+          "
+
+      - name: Create Metashape installer ZIP
+        run: |
+          mkdir -p dist
+          python -c "
+          import zipfile, pathlib
+          dist = pathlib.Path('dist')
+          zip_path = dist / 'orthoswift-metashape.zip'
+          root_files = ['install-windows.bat', 'install-macos.command', 'install-macos-linux.sh', 'requirements.txt', 'README.md', 'LICENSE']
+          src = pathlib.Path('orthoswift')
+          with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+              for rf in root_files:
+                  p = pathlib.Path(rf)
+                  if p.is_file():
+                      zf.write(p, rf)
+              for f in sorted(src.rglob('*')):
+                  if '__pycache__' not in f.parts and not f.name.endswith('.pyc') and f.is_file():
+                      arcname = str(f)
+                      zf.write(f, arcname)
+          print(f'Created {zip_path}')
+          "
+
+      - name: Release to GitHub (on tags / main push)
+        if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'latest' }}
+          name: ${{ startsWith(github.ref, 'refs/tags/') && format('OrthoSWIFT Metashape {0}', github.ref_name) || 'OrthoSWIFT Metashape Plugin (Latest)' }}
+          body: |
+            OrthoSWIFT Agisoft Metashape Plugin standalone release.
+            
+            ### Installation:
+            1. Download and extract `orthoswift-metashape.zip`.
+            2. Double-click `install-windows.bat` (Windows) or `install-macos.command` (macOS).
+            3. Restart Agisoft Metashape.
+          draft: false
+          prerelease: false
+          make_latest: "true"
+          files: |
+            dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
