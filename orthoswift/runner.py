@@ -103,10 +103,7 @@ def validate_config(config):
                 raise ValueError(
                     f"Band assignment exceeds the GeoTIFF band count ({dataset.count}): {details}"
                 )
-        try:
-            from .core.pipeline import _resolve_multispectral_band_map
-        except ImportError:
-            from core.pipeline import _resolve_multispectral_band_map
+        from .core.pipeline import _resolve_multispectral_band_map
         detected_map, alpha_index = _resolve_multispectral_band_map(dataset, clean)
         clean = detected_map
         raster_info = {
@@ -124,8 +121,6 @@ def validate_config(config):
 
 def make_preview(ortho, out_path, band_map):
     import numpy as np, rasterio
-    import matplotlib
-    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     with rasterio.open(ortho) as src:
         ids = [band_map.get(role) for role in ("red", "green", "blue")] if band_map else []
@@ -150,10 +145,7 @@ def run(config, progress_callback=None):
     previews_dir.mkdir(parents=True, exist_ok=True)
     preview = previews_dir / "orthomosaic_preview.png"
     make_preview(ortho, preview, band_map)
-    try:
-        from .core.pipeline import run_agriculture_pipeline
-    except ImportError:
-        from core.pipeline import run_agriculture_pipeline
+    from .core.pipeline import run_agriculture_pipeline
     result = run_agriculture_pipeline(
         ortho_preview=preview, out_dir=out, orthomosaic_path=ortho,
         multispectral_path=ortho, multispectral_band_map=band_map,

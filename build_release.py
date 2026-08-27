@@ -1,6 +1,7 @@
 import os
 import zipfile
 import hashlib
+import ast
 from pathlib import Path
 
 def main():
@@ -9,10 +10,16 @@ def main():
     dist_dir.mkdir(exist_ok=True)
 
     version_file = plugin_dir / "orthoswift" / "version.py"
-    version_vars = {}
+    version = "1.0.0"
     if version_file.exists():
-        exec(version_file.read_text(encoding="utf-8"), version_vars)
-    version = version_vars.get("__version__", "1.0.0")
+        tree = ast.parse(version_file.read_text(encoding="utf-8"), filename=str(version_file))
+        for node in tree.body:
+            if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "__version__"
+                for target in node.targets
+            ):
+                version = ast.literal_eval(node.value)
+                break
 
     zip_name = f"orthoswift-webodm-plugin-v{version}.zip"
     zip_path = dist_dir / zip_name
@@ -47,10 +54,10 @@ def main():
     sha_file.write_text(f"{sha256}  {zip_name}\n", encoding="utf-8")
 
     # Also create unversioned bundle for convenience
-    generic_zip = dist_dir / "orthoswift-plugin-webodm.zip"
+    generic_zip = dist_dir / "orthoswift-webodm-plugin.zip"
     generic_zip.write_bytes(zip_path.read_bytes())
-    generic_sha = dist_dir / "orthoswift-plugin-webodm.zip.sha256"
-    generic_sha.write_text(f"{sha256}  orthoswift-plugin-webodm.zip\n", encoding="utf-8")
+    generic_sha = dist_dir / "orthoswift-webodm-plugin.zip.sha256"
+    generic_sha.write_text(f"{sha256}  orthoswift-webodm-plugin.zip\n", encoding="utf-8")
 
     size_kb = zip_path.stat().st_size / 1024
 

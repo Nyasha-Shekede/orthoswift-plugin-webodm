@@ -29,10 +29,10 @@ from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Image,
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
-# Register OrthoSWIFT brand fonts if available in parent plugin directory
-plugin_dir = Path(__file__).parent.parent
-font_path = plugin_dir / "SpaceGrotesk-Bold.ttf"
-inter_path = plugin_dir / "InterVariable.ttf"
+# Register bundled OrthoSWIFT brand fonts when available.
+font_dir = Path(__file__).parent.parent / "assets" / "fonts"
+font_path = font_dir / "SpaceGrotesk-Bold.ttf"
+inter_path = font_dir / "InterVariable.ttf"
 
 USE_SPACE_GROTESK = False
 if font_path.exists():

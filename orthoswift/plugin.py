@@ -13,33 +13,17 @@ logger = logging.getLogger(__name__)
 def _job(task_id, project_id, plugin_path, python_packages_path, params, progress_callback=None):
     # This function must be self-contained: WebODM serializes only its source
     # and evaluates it in an isolated Celery worker namespace.
-    import logging, os, pathlib, shutil, site, sys
+    import logging, pathlib, shutil, sys
     logger = logging.getLogger("orthoswift.webodm.worker")
-    priority_paths = []
-    for base in [python_packages_path, plugin_path]:
-        if base:
-            p = str(base)
-            sp = os.path.join(p, "site-packages")
-            if os.path.isdir(sp) and sp not in priority_paths:
-                priority_paths.append(sp)
-            if os.path.isdir(p) and p not in priority_paths:
-                priority_paths.append(p)
-    for p in reversed(priority_paths):
-        site.addsitedir(p)
-        while p in sys.path:
-            sys.path.remove(p)
-        sys.path.insert(0, p)
-    try:
-        import shapely
-        for modname in ("strtree", "ops", "geometry", "affinity", "wkt", "prepared"):
-            try:
-                mod = __import__(f"shapely.{modname}", fromlist=[modname])
-                if not hasattr(shapely, modname):
-                    setattr(shapely, modname, mod)
-            except Exception:
-                pass
-    except Exception:
-        pass
+
+    # WebODM evaluates this function in an isolated namespace. Add only the
+    # two paths required by the documented plugin layout: private packages and
+    # the parent of the ``orthoswift`` package. Do not probe alternate layouts
+    # or mutate third-party module namespaces.
+    import_paths = [python_packages_path, str(pathlib.Path(plugin_path).resolve().parent)]
+    for import_path in reversed([str(path) for path in import_paths if path]):
+        if import_path not in sys.path:
+            sys.path.insert(0, import_path)
     try:
         import rasterio
         from app.models import Task
@@ -77,7 +61,10 @@ def _job(task_id, project_id, plugin_path, python_packages_path, params, progres
             if root.is_dir():
                 for path in sorted(root.glob("**/*orthophoto*.tif")):
                     add(path)
-        candidates = [path for path in candidates if path.is_file()]
+        candidates = [
+            path.resolve() for path in candidates
+            if path.is_file() and path.resolve().is_relative_to(task_dir)
+        ]
         if not candidates:
             raise FileNotFoundError(
                 "No task-local ODM orthophoto GeoTIFF was found. Complete the WebODM "
@@ -109,13 +96,12 @@ def _job(task_id, project_id, plugin_path, python_packages_path, params, progres
         ))
         raster = compatible[0]
         ortho = raster["path"]
-        out = task_dir / "orthoswift"
+        out = (task_dir / "orthoswift").resolve()
+        if not out.is_relative_to(task_dir):
+            raise ValueError("Invalid task output path")
         if out.exists():
             shutil.rmtree(out)
-        try:
-            from orthoswift.runner import run
-        except ImportError:
-            from runner import run
+        from orthoswift.runner import run
         config = {
             "out_dir": str(out), "orthomosaic_path": str(ortho),
             "zones": params["zones"],
@@ -130,46 +116,31 @@ def _job(task_id, project_id, plugin_path, python_packages_path, params, progres
         public_raster = {key: value for key, value in raster.items() if key != "path"}
         return {"file": result["archive"], "filename": "orthoswift-deliverables.zip",
                 "input_raster": public_raster}
-    except Exception as exc:
+    except Exception:
         logger.exception("OrthoSWIFT WebODM worker failed")
-        return {"error": f"{type(exc).__name__}: {exc}", "error_type": type(exc).__name__}
+        return {"error": "OrthoSWIFT processing failed", "error_type": "processing_error"}
 
 
 def _job_file(file_path_str, plugin_path, python_packages_path, params, progress_callback=None):
-    import logging, os, pathlib, site, sys, zipfile
+    import logging, pathlib, shutil, sys, tempfile, zipfile
     logger = logging.getLogger("orthoswift.webodm.worker")
-    priority_paths = []
-    for base in [python_packages_path, plugin_path]:
-        if base:
-            p = str(base)
-            sp = os.path.join(p, "site-packages")
-            if os.path.isdir(sp) and sp not in priority_paths:
-                priority_paths.append(sp)
-            if os.path.isdir(p) and p not in priority_paths:
-                priority_paths.append(p)
-    for p in reversed(priority_paths):
-        site.addsitedir(p)
-        while p in sys.path:
-            sys.path.remove(p)
-        sys.path.insert(0, p)
-    try:
-        import shapely
-        for modname in ("strtree", "ops", "geometry", "affinity", "wkt", "prepared"):
-            try:
-                mod = __import__(f"shapely.{modname}", fromlist=[modname])
-                if not hasattr(shapely, modname):
-                    setattr(shapely, modname, mod)
-            except Exception:
-                pass
-    except Exception:
-        pass
+
+    import_paths = [python_packages_path, str(pathlib.Path(plugin_path).resolve().parent)]
+    for import_path in reversed([str(path) for path in import_paths if path]):
+        if import_path not in sys.path:
+            sys.path.insert(0, import_path)
     try:
         import rasterio
         input_path = pathlib.Path(file_path_str).resolve()
         if not input_path.is_file():
             raise FileNotFoundError(f"Uploaded file not found: {input_path}")
         
-        work_dir = pathlib.Path(params.get("temp_dir") or input_path.parent).resolve()
+        temp_dir_value = params.get("temp_dir")
+        if not temp_dir_value:
+            raise ValueError("A per-request temporary directory is required")
+        work_dir = pathlib.Path(temp_dir_value).resolve()
+        if input_path.parent != work_dir:
+            raise ValueError("Uploaded file is outside its temporary directory")
         ortho_path = None
         
         if progress_callback:
@@ -229,10 +200,7 @@ def _job_file(file_path_str, plugin_path, python_packages_path, params, progress
                 raise ValueError(f"File {ortho_path.name} is not a valid georeferenced GeoTIFF.")
 
         out = work_dir / "orthoswift"
-        try:
-            from orthoswift.runner import run
-        except ImportError:
-            from runner import run
+        from orthoswift.runner import run
         config = {
             "out_dir": str(out),
             "orthomosaic_path": str(ortho_path),
@@ -245,10 +213,19 @@ def _job_file(file_path_str, plugin_path, python_packages_path, params, progress
         if progress_callback:
             progress_callback(f"Analyzing {ortho_path.name} ({info['bands']} bands)", 20)
         result = run(config, progress_callback=progress_callback)
-        return {"file": result["archive"], "filename": "orthoswift-deliverables.zip", "input_raster": info}
-    except Exception as exc:
+
+        # Preserve only the downloadable archive. Remove the original upload,
+        # extracted raster and intermediate output tree before returning.
+        result_dir = pathlib.Path(tempfile.mkdtemp(prefix="orthoswift_result_"))
+        result_archive = result_dir / "orthoswift-deliverables.zip"
+        shutil.copy2(result["archive"], result_archive)
+        shutil.rmtree(work_dir, ignore_errors=True)
+        return {"file": str(result_archive), "filename": result_archive.name, "input_raster": info}
+    except Exception:
         logger.exception("OrthoSWIFT WebODM worker failed on uploaded file")
-        return {"error": f"{type(exc).__name__}: {exc}", "error_type": type(exc).__name__}
+        if "work_dir" in locals():
+            shutil.rmtree(work_dir, ignore_errors=True)
+        return {"error": "OrthoSWIFT processing failed", "error_type": "processing_error"}
 
 
 def _save_uploaded_file(uploaded, dest_path, max_bytes=20 * 1024 * 1024 * 1024):
@@ -330,9 +307,10 @@ class Plugin(PluginBase):
         def start(request):
             from app.models import Task
             from app.api.common import check_project_perms
-            import pathlib, tempfile, uuid
+            import pathlib, shutil, tempfile, uuid
             if request.method != "POST":
                 return JsonResponse({"error": "POST required"}, status=405)
+            temp_dir = None
             try:
                 zones = 3
                 offline_basemap = True
@@ -347,10 +325,10 @@ class Plugin(PluginBase):
                         upload_id = str(uuid.uuid4())
                         temp_dir = pathlib.Path(tempfile.gettempdir()) / f"orthoswift_upload_{upload_id}"
                         temp_dir.mkdir(parents=True, exist_ok=True)
-                        safe_name = pathlib.Path(str(uploaded.name)).name
-                        if not safe_name or safe_name in {".", ".."}:
-                            raise ValueError("Invalid uploaded filename")
-                        saved_path = temp_dir / safe_name
+                        upload_suffix = pathlib.Path(str(uploaded.name)).suffix.lower()
+                        if upload_suffix not in {".tif", ".tiff", ".zip"}:
+                            raise ValueError("Upload must be a .tif, .tiff or .zip file")
+                        saved_path = temp_dir / f"upload{upload_suffix}"
                         _save_uploaded_file(uploaded, saved_path)
 
                         zones = int(request.POST.get("zones", 3))
@@ -383,10 +361,15 @@ class Plugin(PluginBase):
                             "fertilizer_rate_plan": fertilizer_rate_plan,
                             "spot_spray_rate_plan": spot_spray_rate_plan,
                         }
-                        worker = run_function_async(
-                            _job_file, str(saved_path), self.get_path(),
-                            self.get_python_packages_path(), params, with_progress=True,
-                        )
+                        try:
+                            worker = run_function_async(
+                                _job_file, str(saved_path), self.get_path(),
+                                self.get_python_packages_path(), params, with_progress=True,
+                            )
+                        except Exception:
+                            import shutil
+                            shutil.rmtree(temp_dir, ignore_errors=True)
+                            raise
                         return JsonResponse({"celery_task_id": worker.task_id})
                 
                 # Fallback for JSON body if task_id/project_id passed
@@ -395,8 +378,11 @@ class Plugin(PluginBase):
                     data = json.loads(request.body.decode("utf-8"))
                     task = Task.objects.get(pk=data["task_id"], project_id=data["project_id"])
                     check_project_perms(request, task.project, ("change_project",))
+                    zones = int(data.get("zones", 3))
+                    if not 2 <= zones <= 8:
+                        raise ValueError("zones must be between 2 and 8")
                     params = {
-                        "zones": int(data.get("zones", 3)),
+                        "zones": zones,
                         "offline_basemap": data.get("offline_basemap", True) is not False,
                         "fertilizer_rate_plan": data.get("fertilizer_rate_plan"),
                         "spot_spray_rate_plan": data.get("spot_spray_rate_plan"),
@@ -408,9 +394,15 @@ class Plugin(PluginBase):
                     return JsonResponse({"celery_task_id": worker.task_id})
                 
                 return JsonResponse({"error": "Please select a GeoTIFF (.tif) or WebODM all.zip archive to upload."}, status=400)
-            except Exception as exc:
-                logger.exception("Failed starting OrthoSWIFT processing")
+            except (ValueError, KeyError, json.JSONDecodeError) as exc:
+                if temp_dir is not None:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
                 return JsonResponse({"error": str(exc)}, status=400)
+            except Exception:
+                if temp_dir is not None:
+                    shutil.rmtree(temp_dir, ignore_errors=True)
+                logger.exception("Failed starting OrthoSWIFT processing")
+                return JsonResponse({"error": "Unable to start OrthoSWIFT processing"}, status=500)
         return [MountPoint('run$', start)]
 
     def include_css_files(self):

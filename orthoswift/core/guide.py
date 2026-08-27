@@ -16,10 +16,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Suppress third-party library logging noise
-for libname in ['reportlab', 'markdown2', 'PIL', 'urllib3']:
-    logging.getLogger(libname).setLevel(logging.CRITICAL)
-
 
 # ---------------------------------------------------------------------------
 # Guide content — embedded at development time from the repo-root .md files

@@ -1,11 +1,14 @@
-numpy>=1.24,<3
-scipy>=1.10,<2
-rasterio>=1.3,<2
-shapely>=2,<3
-geopandas>=0.14,<2
-scikit-learn>=1.3,<2
-reportlab>=4,<6
-matplotlib>=3.7,<4
-pandas>=2,<3
-affine>=2.4,<4
-pyproj>=3.5,<4
+# WebODM installs these into a plugin-private target directory. Keep this set
+# constrained to the versions exercised by CI and the WebODM smoke test.
+numpy>=2.0,<2.3
+scipy>=1.13,<1.16
+rasterio>=1.4,<1.5
+shapely>=2.0,<2.2
+geopandas>=1.0,<1.2
+scikit-learn>=1.5,<1.8
+reportlab>=4.2,<5
+matplotlib>=3.8,<3.11
+pandas>=2.2,<2.4
+# Imported directly by decisions.py; do not rely on rasterio's transitive dependency.
+affine>=2.4,<3
+pyproj>=3.6,<3.8

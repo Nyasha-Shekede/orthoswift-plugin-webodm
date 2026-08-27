@@ -7,20 +7,17 @@ and writes the existing GIS, controller and PDF deliverables.
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
 from typing import Any, Mapping, Optional
 
-# Configure logging - suppress third-party library noise
 logger = logging.getLogger(__name__)
-for libname in ['matplotlib', 'matplotlib.font_manager', 'PIL', 'rasterio', 'fiona', 'geopandas', 'shapely', 'numpy', 'scipy', 'pandas', 'osgeo']:
-    logging.getLogger(libname).setLevel(logging.CRITICAL)
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 import numpy as np
 import pandas as pd
 import rasterio
 from rasterio.warp import calculate_default_transform, reproject, Resampling
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from .exports import write_raster, export_polygons_kml, export_analytics_methodology
@@ -800,7 +797,6 @@ def run_agriculture_pipeline(
             basemap_mbtiles_path = basemap_result['mbtiles_path']
         except Exception as _bm_err:
             logger.warning('Basemap generation failed (controller ZIPs will have no basemap): %s', _bm_err)
-            _bm_staging_cleanup = True
 
     prescription_qc_passed = absolute_reflectance_valid and not zoning_used_full_footprint_fallback and len(zones) >= 2
     if export_relative_application_packages and not prescription_qc_passed and not allow_unvalidated_prescription_export:
@@ -903,12 +899,9 @@ def run_agriculture_pipeline(
                 outputs['spot_spray_controller_packages_dir'] = str(spot_controller_dir)
 
     # Clean up basemap staging dir — it was only needed to populate the controller ZIPs
-    if bundle_basemap_in_controller_archives and basemap_mbtiles_path is not None:
-        try:
-            import shutil as _shutil
-            _shutil.rmtree(_bm_staging, ignore_errors=True)
-        except Exception:
-            pass
+    if bundle_basemap_in_controller_archives:
+        import shutil as _shutil
+        _shutil.rmtree(_bm_staging, ignore_errors=True)
 
 
     primary_index = feature_names[0]

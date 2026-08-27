@@ -64,5 +64,3 @@ def pytest_configure(config):
         for name, module in modules.items():
             sys.modules.setdefault(name, module)
 
-
-pytest_configure(None)

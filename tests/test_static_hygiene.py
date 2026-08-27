@@ -26,6 +26,8 @@ def test_removed_backend_features_are_absent():
 def test_visible_interface_files_are_present_and_template_self_contained():
     template=(ROOT/'orthoswift/templates/index.html').read_text(encoding='utf-8')
     assert 'id="osw-form"' in template
-    assert 'fertilizer_rate_plan' in template
-    assert '<script>' in template
+    controller=(ROOT/'orthoswift/public/main.js').read_text(encoding='utf-8')
+    assert 'fertilizer_rate_plan' in controller
+    assert '<script>' not in template
+    assert (ROOT/'orthoswift/public/main.js').exists()
     assert (ROOT/'orthoswift/public/style.css').exists()
