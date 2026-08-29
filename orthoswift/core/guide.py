@@ -384,12 +384,12 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
 
 
 def export_guides(out_dir: str | Path) -> tuple[Optional[Path], Optional[Path]]:
-    """Generate setup_guide.pdf at the deliverables root."""
-    out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    field_action_pdf = None
-    try:
-        field_action_pdf = generate_guide_pdf(out_dir / "setup_guide.pdf", domain="field_action")
-    except Exception as exc:
-        logger.error(f"[guide] export_guides field_action PDF failed: {exc}", exc_info=True)
-    return field_action_pdf, None
+    """
+    Stub — setup_guide.pdf has been retired.
+
+    The Machine USB Loading Reference is now embedded directly in the official
+    Spray & Application Job Sheet (report.py → build_agriculture_pdf). There is
+    no longer a separate setup guide deliverable.
+    """
+    logger.info("[guide] setup_guide.pdf generation skipped — USB reference is embedded in the main report.")
+    return None, None
