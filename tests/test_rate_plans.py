@@ -7,9 +7,8 @@ from shapely.geometry import box
 from orthoswift.core.decisions import (
     ApplicationRatePlan,
     build_vra_prescription_gdf,
-    export_vra_shapefile_zip,
+    export_dji_agras_prescription_zip,
     resolve_application_rate_plan,
-    validate_vra_shapefile_zip,
 )
 
 
@@ -61,12 +60,13 @@ def test_base_rate_alone_refuses():
         build_vra_prescription_gdf(zones(), base_rate=150, rate_unit="KG_HA")
 
 
-def test_generic_and_deere_packages_validate(tmp_path):
-    rx,_=resolve_application_rate_plan(zones(), physical())
-    generic=export_vra_shapefile_zip(rx,tmp_path/'generic.zip')
-    assert validate_vra_shapefile_zip(generic)["valid"]
-    deere=export_vra_shapefile_zip(rx,tmp_path/'deere.zip',packaging_profile='john_deere_rx')
-    result=validate_vra_shapefile_zip(deere,packaging_profile='john_deere_rx')
-    assert result["valid"], result["errors"]
-    with zipfile.ZipFile(deere) as archive:
-        assert "Rx/fertilizer_zones.shp" in archive.namelist()
+def test_dji_agras_package_validates(tmp_path):
+    prescription, _ = resolve_application_rate_plan(zones(), physical())
+    result = export_dji_agras_prescription_zip(prescription, tmp_path / "controllers")
+
+    assert result["dji_agras_vra_validation"]["valid"]
+    with zipfile.ZipFile(result["dji_agras_vra_zip"]) as archive:
+        names = set(archive.namelist())
+    assert "DJI/Shapefile/application_boundary.shp" in names
+    assert "DJI/Rx/application_rate.tif" in names
+    assert all(name.startswith("DJI/") for name in names)

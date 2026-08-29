@@ -196,7 +196,6 @@ def run(config, progress_callback=None):
         export_relative_application_packages=True,
         fertilizer_rate_plan=config.get("fertilizer_rate_plan"),
         spot_spray_rate_plan=config.get("spot_spray_rate_plan"),
-        include_research_controller_packages=True,
         bundle_basemap_in_controller_archives=options["offline_basemap"],
         allow_unvalidated_prescription_export=_as_bool(
             config.get("unsafe_override", False), name="unsafe_override"
@@ -218,7 +217,7 @@ def run(config, progress_callback=None):
                     "host": config.get("host"),
                 },
                 "input_raster": raster_info,
-                "controller_packages_requested": "all_supported",
+                "controller_package_requested": "dji_agras",
                 "core_outputs": result,
             },
             indent=2,

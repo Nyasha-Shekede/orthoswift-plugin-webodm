@@ -217,18 +217,13 @@ def build_agriculture_pdf(
 
     # Machine USB Setup & Quick-Load Reference
     setup_rows = [
-        ["Display / Machine System", "ZIP Package", "USB Destination Path"],
-        ["DJI Agras Drones", "dji_agras.zip", "USB:/DJI/"],
-        ["XAG Drones", "xag.zip", "USB:/XAG/"],
-        ["John Deere (GS3 / Gen 4 / G5)", "john_deere.zip", "USB:/Rx/"],
-        ["Case IH (Pro 700/1200) & New Holland", "case_ih.zip / new_holland.zip", "USB:/Shapefile/"],
-        ["Trimble (GFX / AgGPS)", "trimble_gfx.zip", "USB:/AgData/Prescriptions/"],
-        ["Ag Leader & Universal ISOBUS", "ag_leader.zip / universal.zip", "USB Root"],
+        ["System", "ZIP Package", "USB Destination Path"],
+        ["DJI Agras", "dji_agras.zip", "USB:/DJI/"],
     ]
     story.append(Paragraph("Machine USB Loading Reference", s["H2"]))
     story.append(_table(setup_rows, col_widths=[60 * mm, 60 * mm, 66 * mm]))
     story.append(Paragraph(
-        "Extract your machine's brand ZIP from prescriptions/ to the stated USB folder path. "
+        "Extract `dji_agras.zip` so its DJI folder is at the USB root. "
         "Each ZIP includes Basemap/orthomosaic.mbtiles for in-cab offline field imagery.",
         s["Small"],
     ))
@@ -240,7 +235,7 @@ def build_agriculture_pdf(
         story.append(Paragraph(disclaimer.replace("\n\n", "<br/>"), s["Small"]))
         story.append(Spacer(1, 2))
     story.append(Paragraph(
-        "Prescriptions are formatted for machine controllers and spray drones. "
+        "Prescriptions are formatted for DJI Agras workflows. "
         "Verify product labels, tank mix calibration, drift conditions, and machine boundaries before applying.",
         s["Small"],
     ))

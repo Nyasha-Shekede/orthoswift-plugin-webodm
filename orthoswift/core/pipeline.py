@@ -29,7 +29,7 @@ from .decisions import (
     ApplicationRatePlan,
     _write_json,
     build_spot_spray_prescription_gdf,
-    export_all_controller_prescription_zips,
+    export_dji_agras_prescription_zip,
     resolve_application_rate_plan,
 )
 from .exports import export_analytics_methodology, export_polygons_kml, write_raster
@@ -1105,47 +1105,22 @@ def _prescription_export_decision(
     )
 
 
-def _export_fertilizer_controllers(
-    *,
-    prescription_zones,
-    controller_dir,
-    rate_unit,
-    include_research_stage,
-    basemap_path,
-    include_basemap,
-    summaries_dir,
-    outputs,
+def _export_dji_agras_controller(
+    *, prescription_zones, controller_dir, rate_unit, basemap_path,
+    include_basemap, summaries_dir, outputs,
 ):
-    packages = export_all_controller_prescription_zips(
+    package = export_dji_agras_prescription_zip(
         prescription_zones,
         controller_dir,
         rate_unit=rate_unit,
-        include_research_stage=include_research_stage,
         basemap_mbtiles_path=basemap_path,
-        include_basemap_in_archives=include_basemap,
+        include_basemap_in_archive=include_basemap,
     )
-    outputs.update(
-        controller_packages_dir=str(controller_dir),
-        john_deere_rx_zip=packages["john_deere_zip"],
-        case_ih_shapefile_zip=packages["case_ih_zip"],
-        trimble_aggps_zip=packages["trimble_aggps_zip"],
-        trimble_gfx_zip=packages["trimble_gfx_zip"],
-        ag_leader_root_zip=packages["ag_leader_zip"],
-        universal_zip=packages["generic_flat_zip"],
-        new_holland_intelliview_zip=packages["new_holland_zip"],
-    )
-    for source, target in (
-        ("dji_agras_vra_zip", "dji_agras_vra_zip"),
-        ("xag_vra_zip", "xag_vra_zip"),
-    ):
-        if source in packages:
-            outputs[target] = packages[source]
-    validations = {
-        key: value for key, value in packages.items() if key.endswith("_validation")
-    }
-    validation_path = summaries_dir / "controller_packages_validation.csv"
-    pd.DataFrame([validations]).to_csv(validation_path, index=False)
-    outputs["controller_packages_validation_csv"] = str(validation_path)
+    outputs["controller_packages_dir"] = str(controller_dir)
+    outputs["dji_agras_vra_zip"] = package["dji_agras_vra_zip"]
+    validation_path = summaries_dir / "dji_agras_validation.json"
+    _write_json(validation_path, package["dji_agras_vra_validation"])
+    outputs["dji_agras_validation_json"] = str(validation_path)
 
 
 def _spot_treated_area_hectares(spot_spray_gdf) -> float:
@@ -1198,7 +1173,6 @@ def _export_spot_controllers(
     rasters_dir,
     prescriptions_dir,
     summaries_dir,
-    include_research_stage,
     basemap_path,
     include_basemap,
     outputs,
@@ -1259,15 +1233,18 @@ def _export_spot_controllers(
             summaries_dir=summaries_dir,
         )
     controller_dir = spot_dir / "controller_packages"
-    export_all_controller_prescription_zips(
+    package = export_dji_agras_prescription_zip(
         prescription,
         controller_dir,
         rate_unit=rate_unit,
-        include_research_stage=include_research_stage,
         basemap_mbtiles_path=basemap_path,
-        include_basemap_in_archives=include_basemap,
+        include_basemap_in_archive=include_basemap,
     )
     outputs["spot_spray_controller_packages_dir"] = str(controller_dir)
+    outputs["spot_spray_dji_agras_vra_zip"] = package["dji_agras_vra_zip"]
+    validation_path = summaries_dir / "spot_spray_dji_agras_validation.json"
+    _write_json(validation_path, package["dji_agras_vra_validation"])
+    outputs["spot_spray_dji_agras_validation_json"] = str(validation_path)
     return summary
 
 
@@ -1291,7 +1268,6 @@ def _export_controller_packages(
     vra_dir,
     prescription_zones,
     fertilizer_rate_summary,
-    include_research_controller_packages,
     hotspots,
     resolved_spot_spray_plan,
     rasters_dir,
@@ -1324,11 +1300,10 @@ def _export_controller_packages(
             warnings=warnings,
         )
         if should_export:
-            _export_fertilizer_controllers(
+            _export_dji_agras_controller(
                 prescription_zones=prescription_zones,
                 controller_dir=vra_dir / "controller_packages",
                 rate_unit=fertilizer_rate_summary["unit"],
-                include_research_stage=include_research_controller_packages,
                 basemap_path=basemap_path,
                 include_basemap=bundle_basemap_in_controller_archives,
                 summaries_dir=summaries_dir,
@@ -1340,7 +1315,6 @@ def _export_controller_packages(
                 rasters_dir=rasters_dir,
                 prescriptions_dir=prescriptions_dir,
                 summaries_dir=summaries_dir,
-                include_research_stage=include_research_controller_packages,
                 basemap_path=basemap_path,
                 include_basemap=bundle_basemap_in_controller_archives,
                 outputs=outputs,
@@ -1650,7 +1624,6 @@ def run_agriculture_pipeline(
     export_relative_application_packages: bool = True,
     fertilizer_rate_plan: Optional[ApplicationRatePlan | Mapping[str, Any]] = None,
     spot_spray_rate_plan: Optional[ApplicationRatePlan | Mapping[str, Any]] = None,
-    include_research_controller_packages: bool = False,
     export_offline_basemap: bool = False,
     bundle_basemap_in_controller_archives: bool = True,
     basemap_min_zoom: Optional[int] = None,
@@ -1800,7 +1773,6 @@ def run_agriculture_pipeline(
         vra_dir=vra_dir,
         prescription_zones=prescription_zones,
         fertilizer_rate_summary=fertilizer_rate_summary,
-        include_research_controller_packages=include_research_controller_packages,
         hotspots=hotspots,
         resolved_spot_spray_plan=resolved_spot_spray_plan,
         rasters_dir=rasters_dir,

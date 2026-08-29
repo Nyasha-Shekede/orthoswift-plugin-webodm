@@ -301,11 +301,6 @@ def export_orthomosaic_mbtiles(
         "compatibility": {
             "dji_pilot_2_enterprise": "documented_manual_custom_layer_import",
             "dji_agras_app": "not_verified_in_public_t40_t50_manuals",
-            "qgroundcontrol": "external_mbtiles_import_not_documented_by_qgc_offline-map_guide",
-            "john_deere_displays": "mbtiles_direct_import_not_verified",
-            "trimble_ag_displays": "mbtiles_direct_import_not_verified",
-            "ag_leader_displays": "mbtiles_direct_import_not_verified",
-            "case_ih_new_holland_displays": "mbtiles_direct_import_not_verified",
         },
         "operator_note": "Import orthomosaic.mbtiles separately as a custom/offline map layer where supported. Do not treat presence inside a prescription ZIP as automatic controller ingestion.",
         "gdal_cli_equivalent": [

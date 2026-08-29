@@ -54,15 +54,28 @@ def test_full_runner_outputs_all_visible_deliverables(tmp_path):
                 'zones':3,'offline_basemap':False},
                progress_callback=lambda text,pct: progress.append((text,pct)))
     out=result['core_outputs']
-    for key in ['fertilizer_zones_kml','universal_zip','john_deere_rx_zip',
-                'case_ih_shapefile_zip','trimble_gfx_zip','ag_leader_root_zip',
-                'dji_agras_vra_zip','xag_vra_zip','pdf_report','fertilizer_rate_plan_json']:
+    for key in [
+        "fertilizer_zones_kml",
+        "dji_agras_vra_zip",
+        "dji_agras_validation_json",
+        "pdf_report",
+        "fertilizer_rate_plan_json",
+    ]:
         assert Path(out[key]).exists(), key
     assert Path(result['archive']).exists()
     assert progress[-1][1]==100
     with zipfile.ZipFile(result['archive']) as archive:
         names=archive.namelist()
         assert any(name.endswith('spray_report.pdf') for name in names)
+        controller_archives = {
+            Path(name).name
+            for name in names
+            if "controller_packages/" in name and name.endswith(".zip")
+        }
+        assert controller_archives == {"dji_agras.zip"}
+    exported_zip_keys = {key for key in out if key.endswith("_zip")}
+    assert exported_zip_keys
+    assert all("dji_agras" in key for key in exported_zip_keys)
 
 
 def test_physical_rate_plan_reaches_exported_table(tmp_path):
@@ -88,17 +101,17 @@ def test_pipeline_does_not_return_deleted_basemap_staging_path(tmp_path, monkeyp
         pipeline, 'export_orthomosaic_mbtiles',
         lambda *args, **kwargs: {'mbtiles_path': str(staged)},
     )
-    # Controller fan-out is already tested separately; stub it here so the
-    # assertion focuses on the lifecycle of the temporary staging path.
-    def packages(zones, out_dir, **kwargs):
-        out_dir=Path(out_dir); out_dir.mkdir(parents=True,exist_ok=True)
-        keys=['generic_flat','john_deere','case_ih','trimble_aggps','trimble_gfx','ag_leader','new_holland']
-        result={}
-        for key in keys:
-            path=out_dir/f'{key}.zip'; path.write_bytes(b'zip'); result[f'{key}_zip']=str(path)
-            result[f'{key}_validation']={'valid':True,'errors':[]}
-        return result
-    monkeypatch.setattr(pipeline, 'export_all_controller_prescription_zips', packages)
+    def dji_package(zones, out_dir, **kwargs):
+        out_dir = Path(out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        archive = out_dir / "dji_agras.zip"
+        archive.write_bytes(b"zip")
+        return {
+            "dji_agras_vra_zip": str(archive),
+            "dji_agras_vra_validation": {"valid": True, "errors": []},
+        }
+
+    monkeypatch.setattr(pipeline, "export_dji_agras_prescription_zip", dji_package)
     from PIL import Image
     preview=tmp_path/'preview.png'; Image.new('RGB',(20,20),'green').save(preview)
     outputs=pipeline.run_agriculture_pipeline(

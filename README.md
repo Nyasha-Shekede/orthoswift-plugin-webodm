@@ -80,12 +80,12 @@ Depending on the available bands and quality-control gates, the archive contains
 
 - NDVI, NDRE, GLI, MSAVI2, classification, and management-zone GeoTIFFs;
 - management-zone and stress-hotspot GeoJSON/KML/CSV layers;
-- generic and controller-oriented prescription ZIPs;
+- DJI Agras fertilizer and spot-spray prescription ZIPs;
 - optional offline orthomosaic MBTiles;
 - `spray_report.pdf` (mission summary, tank-mix rates, and USB machine loading guide);
 - rate-plan, input-band, methodology, validation, and warning audit files.
 
-DJI and XAG exports are structural/research-stage formats and require target-system verification.
+DJI Agras exports are structural formats and require target-system verification.
 
 ## Development
 
