@@ -120,7 +120,7 @@ def build_agriculture_pdf(
     spot_spray_rate_summary: Optional[dict] = None,
     disclaimer: Optional[str] = None,
 ) -> Path:
-    """Build brief, operator-ready spray & application job sheet."""
+    """Build brief, operator-ready spray report."""
     s = _styles()
     doc = SimpleDocTemplate(
         str(out_path),
@@ -133,7 +133,7 @@ def build_agriculture_pdf(
     story = []
 
     # Title & Subtitle
-    story.append(Paragraph("Spray & Application Job Sheet", s["H1"]))
+    story.append(Paragraph("Spray Report", s["H1"]))
     story.append(Paragraph("Precision prescription package & tank-mix summary", s["Small"]))
     story.append(Spacer(1, 4))
 

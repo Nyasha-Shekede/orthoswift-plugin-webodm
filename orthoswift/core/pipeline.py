@@ -974,7 +974,7 @@ def run_agriculture_pipeline(
         for _, r in hotspots.head(10).iterrows():
             hotspot_rows.append([int(r.hotspot_id), f'{r.area_m2:.0f}', f'{r.mean_ndvi:.3f}', int(r.severity_rank)])
 
-    pdf_path = out_dir / 'health_report.pdf'
+    pdf_path = out_dir / 'spray_report.pdf'
     disclaimer_notes = []
     if not absolute_reflectance_valid:
         disclaimer_notes.append(

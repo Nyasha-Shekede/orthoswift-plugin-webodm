@@ -24,13 +24,13 @@ logger = logging.getLogger(__name__)
 _FIELD_ACTION_GUIDE_SOURCE = """\
 # Setup Guide
 
-Your field analysis is complete. Read `health_report.pdf` first, then use this guide to load prescriptions onto your machines.
+Your field analysis is complete. Read `spray_report.pdf` first, then use this guide to load prescriptions onto your machines.
 
 ## What's in This Package
 
 | File / Folder | What it is |
 |---|---|
-| `health_report.pdf` | Crop health summary — start here |
+| `spray_report.pdf` | Spray report & prescription package summary — start here |
 | `prescriptions/fertilizer_zones/fertilizer_zones.kml` | Variable-rate management zones — open in Google Earth to review before applying |
 | `prescriptions/fertilizer_zones/controller_packages/` | Brand ZIPs ready to extract to USB (single machine) |
 | `prescriptions/fertilizer_zones/fleet_machines/` | Per-machine swarm VRA packages + color-coded zone KML (present when fleet is configured) |
@@ -388,7 +388,7 @@ def export_guides(out_dir: str | Path) -> tuple[Optional[Path], Optional[Path]]:
     Stub — setup_guide.pdf has been retired.
 
     The Machine USB Loading Reference is now embedded directly in the official
-    Spray & Application Job Sheet (report.py → build_agriculture_pdf). There is
+    Spray Report (report.py → build_agriculture_pdf). There is
     no longer a separate setup guide deliverable.
     """
     logger.info("[guide] setup_guide.pdf generation skipped — USB reference is embedded in the main report.")

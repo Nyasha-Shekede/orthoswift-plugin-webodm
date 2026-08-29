@@ -82,7 +82,7 @@ Depending on the available bands and quality-control gates, the archive contains
 - management-zone and stress-hotspot GeoJSON/KML/CSV layers;
 - generic and controller-oriented prescription ZIPs;
 - optional offline orthomosaic MBTiles;
-- `health_report.pdf` and `setup_guide.pdf`;
+- `spray_report.pdf` (mission summary, tank-mix rates, and USB machine loading guide);
 - rate-plan, input-band, methodology, validation, and warning audit files.
 
 DJI and XAG exports are structural/research-stage formats and require target-system verification.

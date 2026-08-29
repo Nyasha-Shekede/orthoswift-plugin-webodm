@@ -47,8 +47,7 @@ def test_full_runner_outputs_all_visible_deliverables(tmp_path):
     assert progress[-1][1]==100
     with zipfile.ZipFile(result['archive']) as archive:
         names=archive.namelist()
-        assert any(name.endswith('health_report.pdf') for name in names)
-        assert any(name.endswith('setup_guide.pdf') for name in names)
+        assert any(name.endswith('spray_report.pdf') for name in names)
 
 
 def test_physical_rate_plan_reaches_exported_table(tmp_path):
