@@ -39,18 +39,16 @@ from __future__ import annotations
 
 from typing import Optional, Sequence, Tuple
 
-import numpy as np
-from scipy import ndimage as ndi
-from rasterio.transform import Affine
-from rasterio import features
-from shapely.geometry import shape
 import geopandas as gpd
+import numpy as np
+from rasterio import features
+from rasterio.transform import Affine
+from scipy import ndimage as ndi
+from shapely.geometry import shape
 from sklearn.cluster import MiniBatchKMeans
 
 
-# --------------------------------------------------------------------------
 # Index math (all inputs must be float, scaled in their natural range)
-# --------------------------------------------------------------------------
 def _safe_div(num, den, *, denominator_epsilon: float = 1e-6, valid_range: tuple[float, float] | None = (-1.0, 1.0)):
     """Safe division for normalized vegetation-index ratios.
 
@@ -113,9 +111,7 @@ def water_index_green_gt_nir(green: np.ndarray, nir: np.ndarray, margin: float =
 
 
 
-# --------------------------------------------------------------------------
 # Classification, masking
-# --------------------------------------------------------------------------
 def classify_ndvi(ndvi_arr: np.ndarray,
                   breaks: Sequence[float] = (0.2, 0.4, 0.6)
                   ) -> np.ndarray:
@@ -229,9 +225,7 @@ def clean_crop_mask(
     return crop.astype(bool), metrics
 
 
-# --------------------------------------------------------------------------
 # Management zones (k-means, post-smoothed)
-# --------------------------------------------------------------------------
 def _remove_small_components(mask: np.ndarray, min_pixels: int) -> np.ndarray:
     if min_pixels <= 1:
         return mask
@@ -527,9 +521,7 @@ def management_zones(
     return label_raster, gdf
 
 
-# --------------------------------------------------------------------------
 # Stress hotspots
-# --------------------------------------------------------------------------
 def stress_hotspots(
     ndvi_arr: np.ndarray,
     transform: Affine,
@@ -608,8 +600,8 @@ def stress_hotspots(
     if not filtered_mask.any():
         return gpd.GeoDataFrame({"geometry": []}, geometry="geometry", crs=crs)
 
-    from shapely.geometry import Polygon, MultiPolygon, GeometryCollection, mapping
     from rasterio.features import geometry_mask
+    from shapely.geometry import GeometryCollection, MultiPolygon, Polygon, mapping
 
     polys, rows = [], []
     hotspot_id = 1

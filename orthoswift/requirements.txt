@@ -1,5 +1,4 @@
-# WebODM installs these into a plugin-private target directory. Keep this set
-# constrained to the versions exercised by CI and the WebODM smoke test.
+# Keep runtime versions within the ranges exercised by CI.
 numpy>=2.0,<2.3
 scipy>=1.13,<1.16
 rasterio>=1.4,<1.5

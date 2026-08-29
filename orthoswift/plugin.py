@@ -1,11 +1,12 @@
-from app.plugins import PluginBase, Menu, MountPoint
+import json
+import logging
+
+from app.plugins import Menu, MountPoint, PluginBase
+from app.plugins.worker import run_function_async
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils.translation import gettext as _
-from app.plugins.worker import run_function_async
-import json
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,10 @@ logger = logging.getLogger(__name__)
 def _job(task_id, project_id, plugin_path, python_packages_path, params, progress_callback=None):
     # This function must be self-contained: WebODM serializes only its source
     # and evaluates it in an isolated Celery worker namespace.
-    import logging, pathlib, shutil, sys
+    import logging
+    import pathlib
+    import shutil
+    import sys
     logger = logging.getLogger("orthoswift.webodm.worker")
 
     # WebODM evaluates this function in an isolated namespace. Add only the
@@ -122,7 +126,12 @@ def _job(task_id, project_id, plugin_path, python_packages_path, params, progres
 
 
 def _job_file(file_path_str, plugin_path, python_packages_path, params, progress_callback=None):
-    import logging, pathlib, shutil, sys, tempfile, zipfile
+    import logging
+    import pathlib
+    import shutil
+    import sys
+    import tempfile
+    import zipfile
     logger = logging.getLogger("orthoswift.webodm.worker")
 
     import_paths = [python_packages_path, str(pathlib.Path(plugin_path).resolve().parent)]
@@ -240,14 +249,14 @@ def _save_uploaded_file(uploaded, dest_path, max_bytes=20 * 1024 * 1024 * 1024):
         The .open() guard raises "The file cannot be reopened." if called
         twice, so we seek the buffer to 0 instead.
     """
-    import pathlib, shutil
+    import pathlib
+    import shutil
     dest_path = pathlib.Path(dest_path)
     dest_path.parent.mkdir(parents=True, exist_ok=True)
     declared_size = getattr(uploaded, "size", None)
     if declared_size is not None and int(declared_size) > max_bytes:
         raise ValueError("Uploaded file exceeds the 20 GiB limit")
 
-    # ── TemporaryUploadedFile: copy from disk, never touch the stream ──────
     if hasattr(uploaded, "temporary_file_path"):
         src = pathlib.Path(uploaded.temporary_file_path())
         if src.stat().st_size > max_bytes:
@@ -259,7 +268,6 @@ def _save_uploaded_file(uploaded, dest_path, max_bytes=20 * 1024 * 1024 * 1024):
             raise
         return
 
-    # ── InMemoryUploadedFile (BytesIO): seek to 0 then stream ─────────────
     written = 0
     try:
         file_obj = getattr(uploaded, "file", None)
@@ -305,9 +313,13 @@ class Plugin(PluginBase):
     def api_mount_points(self):
         @login_required
         def start(request):
-            from app.models import Task
+            import pathlib
+            import shutil
+            import tempfile
+            import uuid
+
             from app.api.common import check_project_perms
-            import pathlib, shutil, tempfile, uuid
+            from app.models import Task
             if request.method != "POST":
                 return JsonResponse({"error": "POST required"}, status=405)
             temp_dir = None

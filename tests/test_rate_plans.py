@@ -1,4 +1,5 @@
 import zipfile
+
 import geopandas as gpd
 import pytest
 from shapely.geometry import box
@@ -21,10 +22,10 @@ def zones():
 
 
 def physical(**updates):
-    values=dict(mode="physical", operation="fertilizer", product_name="Urea 46-0-0",
-                rate_basis="product", unit="KG_HA", strategy="explicit_by_zone",
-                zone_rates={0:120,1:150,2:180}, equipment_min_rate=100,
-                equipment_max_rate=200, approved_by="Operator")
+    values={"mode": "physical", "operation": "fertilizer", "product_name": "Urea 46-0-0",
+                "rate_basis": "product", "unit": "KG_HA", "strategy": "explicit_by_zone",
+                "zone_rates": {0:120,1:150,2:180}, "equipment_min_rate": 100,
+                "equipment_max_rate": 200, "approved_by": "Operator"}
     values.update(updates)
     return ApplicationRatePlan(**values)
 

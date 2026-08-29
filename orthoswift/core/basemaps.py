@@ -6,14 +6,14 @@ the controller application supports custom MBTiles layers.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Optional, Sequence
 import hashlib
 import json
 import math
 import shutil
 import sqlite3
 import tempfile
+from pathlib import Path
+from typing import Optional, Sequence
 
 import numpy as np
 import rasterio

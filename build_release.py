@@ -1,73 +1,86 @@
-import os
-import zipfile
-import hashlib
 import ast
+import hashlib
+import os
+import shutil
+import zipfile
 from pathlib import Path
 
-def main():
-    plugin_dir = Path(__file__).resolve().parent
-    dist_dir = plugin_dir / "dist"
-    dist_dir.mkdir(exist_ok=True)
+EXCLUDED_DIRECTORIES = {
+    ".git",
+    ".github",
+    ".pytest_cache",
+    ".venv",
+    "__pycache__",
+    "dist",
+    "tests",
+}
+EXCLUDED_SUFFIXES = {".pyc", ".pyd", ".pyo"}
 
-    version_file = plugin_dir / "orthoswift" / "version.py"
-    version = "1.0.0"
-    if version_file.exists():
-        tree = ast.parse(version_file.read_text(encoding="utf-8"), filename=str(version_file))
-        for node in tree.body:
-            if isinstance(node, ast.Assign) and any(
-                isinstance(target, ast.Name) and target.id == "__version__"
-                for target in node.targets
-            ):
-                version = ast.literal_eval(node.value)
-                break
 
-    zip_name = f"orthoswift-webodm-plugin-v{version}.zip"
-    zip_path = dist_dir / zip_name
+def _read_version(path: Path) -> str:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "__version__"
+            for target in node.targets
+        ):
+            version = ast.literal_eval(node.value)
+            if isinstance(version, str) and version.strip():
+                return version
+            break
+    raise ValueError(f"{path} must define a non-empty string __version__")
 
-    exclude_dirs = {"__pycache__", ".pytest_cache", ".git", ".github", "tests", "dist"}
-    exclude_exts = {".pyc", ".pyo", ".pyd"}
 
-    print(f"Building WebODM plugin release package: {zip_name}")
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        # 1. Package orthoswift/ folder
-        orthoswift_dir = plugin_dir / "orthoswift"
-        for root, dirs, files in os.walk(orthoswift_dir):
-            dirs[:] = [d for d in dirs if d not in exclude_dirs]
-            for f in sorted(files):
-                file_path = Path(root) / f
-                if file_path.suffix not in exclude_exts and not f.startswith("."):
-                    rel_path = file_path.relative_to(plugin_dir)
-                    zf.write(file_path, arcname=str(rel_path).replace("\\", "/"))
-                    print(f"  + {rel_path}")
 
-        # 2. Package documentation inside orthoswift/ directory (WebODM requires exactly 1 root directory)
-        for doc in ["LICENSE", "README.md", "SECURITY.md", "CONTRIBUTING.md"]:
-            doc_path = plugin_dir / doc
-            if doc_path.exists():
-                zf.write(doc_path, arcname=f"orthoswift/{doc}")
-                print(f"  + orthoswift/{doc}")
+def main() -> None:
+    root = Path(__file__).resolve().parent
+    dist = root / "dist"
+    dist.mkdir(exist_ok=True)
+    version = _read_version(root / "orthoswift" / "version.py")
+    versioned_name = f"orthoswift-webodm-plugin-v{version}.zip"
+    versioned_archive = dist / versioned_name
 
-    # Generate SHA-256 Checksum for versioned ZIP
-    sha256 = hashlib.sha256(zip_path.read_bytes()).hexdigest()
-    sha_file = dist_dir / f"{zip_name}.sha256"
-    sha_file.write_text(f"{sha256}  {zip_name}\n", encoding="utf-8")
+    print(f"Building WebODM plugin release: {versioned_name}")
+    with zipfile.ZipFile(versioned_archive, "w", zipfile.ZIP_DEFLATED) as archive:
+        package = root / "orthoswift"
+        for directory, directories, files in os.walk(package):
+            directories[:] = sorted(
+                name for name in directories if name not in EXCLUDED_DIRECTORIES
+            )
+            for name in sorted(files):
+                path = Path(directory) / name
+                if path.suffix in EXCLUDED_SUFFIXES or name.startswith("."):
+                    continue
+                archive.write(path, path.relative_to(root).as_posix())
+        for name in ("LICENSE", "README.md", "SECURITY.md", "CONTRIBUTING.md"):
+            path = root / name
+            if path.is_file():
+                archive.write(path, f"orthoswift/{name}")
 
-    # Also create unversioned bundle for convenience
-    generic_zip = dist_dir / "orthoswift-webodm-plugin.zip"
-    generic_zip.write_bytes(zip_path.read_bytes())
-    generic_sha = dist_dir / "orthoswift-webodm-plugin.zip.sha256"
-    generic_sha.write_text(f"{sha256}  orthoswift-webodm-plugin.zip\n", encoding="utf-8")
+    checksum = _sha256(versioned_archive)
+    (dist / f"{versioned_name}.sha256").write_text(
+        f"{checksum}  {versioned_name}\n", encoding="utf-8"
+    )
 
-    size_kb = zip_path.stat().st_size / 1024
+    generic_name = "orthoswift-webodm-plugin.zip"
+    generic_archive = dist / generic_name
+    shutil.copyfile(versioned_archive, generic_archive)
+    (dist / f"{generic_name}.sha256").write_text(
+        f"{checksum}  {generic_name}\n", encoding="utf-8"
+    )
 
-    print("\n" + "=" * 60)
-    print("BUILD RELEASE SUCCESSFUL!")
-    print(f"Artifact : {zip_path}")
-    print(f"Size     : {size_kb:.2f} KB")
-    print(f"SHA-256  : {sha256}")
-    print(f"Checksum : {sha_file}")
-    print("=" * 60)
+    print(f"Artifact : {versioned_archive}")
+    print(f"Generic  : {generic_archive}")
+    print(f"Size     : {versioned_archive.stat().st_size / 1024:.2f} KiB")
+    print(f"SHA-256  : {checksum}")
+
 
 if __name__ == "__main__":
     main()

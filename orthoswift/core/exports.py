@@ -12,17 +12,15 @@ No user-defined geometry. No prescription rates. No AI.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Mapping, Optional, Sequence
 import html
 import json
+from pathlib import Path
+from typing import Mapping, Optional, Sequence
 
+import geopandas as gpd
 import numpy as np
 import rasterio
-import geopandas as gpd
-from shapely.geometry import Polygon, MultiPolygon
-
-
+from shapely.geometry import MultiPolygon, Polygon
 
 
 def write_raster(

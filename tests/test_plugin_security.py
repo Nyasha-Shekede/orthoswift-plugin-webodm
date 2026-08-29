@@ -1,3 +1,4 @@
+import ast
 import sys
 import types
 from pathlib import Path
@@ -54,8 +55,13 @@ def test_plugin_manifest_and_assets_are_consistent():
     import json
     root=Path(__file__).parents[1]
     manifest=json.loads((root/'orthoswift/manifest.json').read_text())
-    version={}
-    exec((root/'orthoswift/version.py').read_text(),version)
+    tree = ast.parse((root / "orthoswift/version.py").read_text(encoding="utf-8"))
+    assignment = next(
+        node for node in tree.body
+        if isinstance(node, ast.Assign)
+        and any(isinstance(target, ast.Name) and target.id == "__version__" for target in node.targets)
+    )
+    version = {"__version__": ast.literal_eval(assignment.value)}
     assert manifest['version']==version['__version__']
     assert manifest['repository'].startswith('https://github.com/')
     assert (root/'orthoswift/public/main.js').exists()

@@ -7,33 +7,30 @@ require operator verification on the target display.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Mapping, Optional, Literal
 import json
+import logging
 import math
 import tempfile
 import zipfile
-import logging
 from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any, Literal, Mapping, Optional
 
-import numpy as np
-
-logger = logging.getLogger(__name__)
-import pandas as pd
 import geopandas as gpd
+import numpy as np
+import pandas as pd
 import rasterio
-from shapely.geometry import mapping
-from shapely.ops import unary_union
 from affine import Affine
 from rasterio import features
+from shapely.geometry import mapping
+from shapely.ops import unary_union
 
-from .exports import export_polygons_kml
 from .basemaps import copy_basemap_companion_files
+from .exports import export_polygons_kml
 
+logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
 # General helpers
-# ---------------------------------------------------------------------------
 
 
 
@@ -148,9 +145,7 @@ def _safe_extract_zip(
             raise
 
 
-# ---------------------------------------------------------------------------
 # Operator-supplied physical application-rate plans
-# ---------------------------------------------------------------------------
 
 _ALLOWED_RATE_UNITS = {"KG_HA", "L_HA", "LB_AC", "GAL_AC", "SEEDS_HA"}
 _ALLOWED_RATE_BASES = {"product", "active_ingredient", "nutrient"}
@@ -261,7 +256,8 @@ def _zone_id_series(zones: gpd.GeoDataFrame) -> pd.Series:
 
 
 def _area_hectares(gdf: gpd.GeoDataFrame) -> np.ndarray:
-    from pyproj import CRS as _CRS, Geod
+    from pyproj import CRS as _CRS
+    from pyproj import Geod
     resolved = _CRS.from_user_input(gdf.crs)
     if resolved.is_projected:
         factors = [float(axis.unit_conversion_factor) for axis in resolved.axis_info[:2]]
@@ -328,9 +324,7 @@ def resolve_application_rate_plan(
     return _validate_prebuilt_prescription_gdf(rx), summary
 
 
-# ---------------------------------------------------------------------------
 # Agriculture: VRA prescription shapefile ZIP
-# ---------------------------------------------------------------------------
 
 
 def _pick_index_field(zones: gpd.GeoDataFrame, preferred: Optional[str] = None) -> str:
@@ -922,9 +916,7 @@ def export_vra_shapefile_zip(
     return out_zip
 
 
-# ---------------------------------------------------------------------------
 # Agriculture: multi-controller/drone prescription packages
-# ---------------------------------------------------------------------------
 
 
 def _tfw_text(transform: Affine) -> str:
@@ -1094,8 +1086,8 @@ def export_dji_agras_vra_package(
         if include_basemap_in_archive and basemap_mbtiles_path is not None:
             try:
                 copy_basemap_companion_files(basemap_mbtiles_path, td_path / "DJI" / "Basemap")
-            except Exception as _bm_err:
-                pass
+            except (OSError, ValueError, RuntimeError) as exc:
+                logger.warning("Could not add the offline basemap to the DJI package: %s", exc)
         _CTRL_EXCLUDE = {"application_zone_methodology.json"}
         with zipfile.ZipFile(out_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
             for f in sorted((td_path / "DJI").rglob("*")):
@@ -1354,9 +1346,7 @@ def export_all_controller_prescription_zips(
     return outputs
 
 
-# ---------------------------------------------------------------------------
 # Agriculture: DJI-style spot-spray KMZ/WPML
-# ---------------------------------------------------------------------------
 
 
 
@@ -1369,9 +1359,7 @@ def export_all_controller_prescription_zips(
 
 
 
-# ---------------------------------------------------------------------------
 # Inspection: ledgers, cut/fill, trafficability, berms
-# ---------------------------------------------------------------------------
 
 
 

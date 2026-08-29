@@ -1,6 +1,6 @@
 """OrthoSWIFT WebODM plugin."""
-from .version import __version__
 from .plugin import Plugin
+from .version import __version__
 
 __author__ = "OrthoSWIFT"
-__all__ = ["__version__", "Plugin"]
+__all__ = ["Plugin", "__version__"]

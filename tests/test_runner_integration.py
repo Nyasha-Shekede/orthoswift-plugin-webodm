@@ -32,6 +32,21 @@ def test_config_rejects_bad_values(tmp_path):
         validate_config({'out_dir':str(tmp_path/'o'),'orthomosaic_path':str(raster),'offline_basemap':'perhaps'})
 
 
+
+def test_invalid_input_does_not_delete_existing_outputs(tmp_path):
+    output = tmp_path / "output"
+    output.mkdir()
+    marker = output / "keep.txt"
+    marker.write_text("keep", encoding="utf-8")
+
+    with pytest.raises(FileNotFoundError):
+        validate_config({
+            "out_dir": str(output),
+            "orthomosaic_path": str(tmp_path / "missing.tif"),
+        })
+
+    assert marker.read_text(encoding="utf-8") == "keep"
+
 def test_full_runner_outputs_all_visible_deliverables(tmp_path):
     raster=write_multispectral(tmp_path/'m.tif')
     progress=[]

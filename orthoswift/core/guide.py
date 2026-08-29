@@ -10,16 +10,14 @@ generation, which is already installed on all OrthoSWIFT worker environments.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Guide content — embedded at development time from the repo-root .md files
-# ---------------------------------------------------------------------------
 
 _FIELD_ACTION_GUIDE_SOURCE = """\
 # Setup Guide
@@ -97,9 +95,7 @@ Zone colours show relative vigor, not diagnosis. Whether high- or low-vigor area
 
 
 
-# ---------------------------------------------------------------------------
 # PDF generation
-# ---------------------------------------------------------------------------
 
 def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
     """
@@ -129,16 +125,22 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        from reportlab.lib.pagesizes import A4
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import mm
+        import re
+
         from reportlab.lib import colors
-        from reportlab.platypus import (
-            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Preformatted
-        )
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+        from reportlab.lib.units import mm
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.ttfonts import TTFont
-        import re
+        from reportlab.platypus import (
+            Paragraph,
+            Preformatted,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
 
         # Use OrthoSWIFT brand fonts if bundled alongside this module
         plugin_dir = Path(__file__).parent.parent
@@ -156,17 +158,15 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
                         USE_SPACE_GROTESK = True
                     else:
                         USE_INTER = True
-                except Exception:
-                    pass
+                except (OSError, ValueError) as exc:
+                    logger.debug("Could not register bundled PDF font %s: %s", p, exc)
 
         title_font = "SpaceGrotesk" if USE_SPACE_GROTESK else "Helvetica-Bold"
         body_font  = "Inter"        if USE_INTER         else "Helvetica"
 
         styles = getSampleStyleSheet()
 
-        # ------------------------------------------------------------------
         # Inline markdown helpers
-        # ------------------------------------------------------------------
         def _esc(text):
             """Escape XML special chars then apply inline markdown."""
             text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -182,9 +182,7 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
         def _para(text, style):
             return Paragraph(_esc(text), style)
 
-        # ------------------------------------------------------------------
         # Named styles
-        # ------------------------------------------------------------------
         def _make_style(name, **kw):
             base = kw.pop("parent", styles["Normal"])
             return ParagraphStyle(name, parent=base, **kw)
@@ -213,9 +211,7 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
                                     leftIndent=16, firstLineIndent=-10, spaceAfter=3),
         }
 
-        # ------------------------------------------------------------------
         # Parse lines → flowables
-        # ------------------------------------------------------------------
         story = []
         lines = source.splitlines()
         in_code = False
@@ -265,7 +261,6 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
             line = lines[i]
             stripped = line.strip()
 
-            # ── Code block ──────────────────────────────────────────────
             if stripped.startswith("```"):
                 if in_code:
                     code_text = "\n".join(code_buf)
@@ -286,7 +281,6 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
                 i += 1
                 continue
 
-            # ── Table row ────────────────────────────────────────────────
             if stripped.startswith("|"):
                 in_table = True
                 cells = [c.strip() for c in stripped.split("|")[1:-1]]
@@ -298,7 +292,6 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
                 if in_table:
                     _flush_table()
 
-            # ── Heading ──────────────────────────────────────────────────
             if stripped.startswith("#"):
                 level = len(stripped) - len(stripped.lstrip("#"))
                 text  = stripped.lstrip("#").strip()
@@ -317,7 +310,6 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
                 i += 1
                 continue
 
-            # ── Bullet (unordered) ───────────────────────────────────────
             ul = re.match(r'^(\s*)[-*]\s+(.*)$', line)
             if ul:
                 indent = len(ul.group(1))
@@ -327,7 +319,6 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
                 i += 1
                 continue
 
-            # ── Numbered list ────────────────────────────────────────────
             ol = re.match(r'^(\s*)(\d+)\.\s+(.*)$', line)
             if ol:
                 indent = len(ol.group(1))
@@ -337,7 +328,6 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
                 i += 1
                 continue
 
-            # ── Regular paragraph ────────────────────────────────────────
             if stripped:
                 story.append(_para(stripped, ST["body"]))
 
@@ -347,9 +337,7 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
         if in_table:
             _flush_table()
 
-        # ------------------------------------------------------------------
         # Build document
-        # ------------------------------------------------------------------
         def _footer(canvas_obj, doc_obj):
             canvas_obj.saveState()
             canvas_obj.setFont("Helvetica-Oblique", 8)
@@ -377,9 +365,7 @@ def generate_guide_pdf(out_path: str | Path, *, domain: str) -> Optional[Path]:
         return None
 
 
-# ---------------------------------------------------------------------------
 # Public API — called from pipeline.py and analysis_worker.py
-# ---------------------------------------------------------------------------
 
 
 
