@@ -2,15 +2,11 @@ name: release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
   workflow_dispatch:
-    inputs:
-      create_release:
-        description: "Publish GitHub Release"
-        required: false
-        type: boolean
-        default: true
 
 permissions:
   contents: write
@@ -74,19 +70,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG_NAME="${{ github.ref_name }}"
-          if [[ "$TAG_NAME" != v* ]]; then
-            TAG_NAME="v${{ steps.get_version.outputs.VERSION }}"
-          fi
-          TITLE="OrthoSWIFT WebODM Plugin v${{ steps.get_version.outputs.VERSION }}"
-          echo "Publishing release for tag $TAG_NAME with files:"
+          TAG="v${{ steps.get_version.outputs.VERSION }}"
+          TITLE="OrthoSWIFT WebODM Plugin $TAG"
+          echo "Publishing release $TAG from commit $GITHUB_SHA"
           ls -la dist/
 
-          if ! gh release view "$TAG_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "$TAG_NAME" dist/*.zip dist/*.sha256 \
-              --title "$TITLE" \
-              --generate-notes \
-              --repo "$GITHUB_REPOSITORY"
-          else
-            gh release upload "$TAG_NAME" dist/*.zip dist/*.sha256 --clobber --repo "$GITHUB_REPOSITORY"
-          fi
+          # Delete stale release + tag so we can recreate cleanly (idempotent)
+          gh release delete "$TAG" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+
+          # Create release — --target creates the git tag at this commit if it doesn't exist
+          gh release create "$TAG" dist/*.zip dist/*.sha256 \
+            --title "$TITLE" \
+            --generate-notes \
+            --target "$GITHUB_SHA" \
+            --repo "$GITHUB_REPOSITORY"
