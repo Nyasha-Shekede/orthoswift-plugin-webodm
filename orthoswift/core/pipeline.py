@@ -1232,7 +1232,7 @@ def _export_spot_controllers(
             rate_plan=rate_plan,
             summaries_dir=summaries_dir,
         )
-    controller_dir = spot_dir / "controller_packages"
+    controller_dir = spot_dir
     package = export_dji_agras_prescription_zip(
         prescription,
         controller_dir,
@@ -1302,7 +1302,7 @@ def _export_controller_packages(
         if should_export:
             _export_dji_agras_controller(
                 prescription_zones=prescription_zones,
-                controller_dir=vra_dir / "controller_packages",
+                controller_dir=vra_dir,
                 rate_unit=fertilizer_rate_summary["unit"],
                 basemap_path=basemap_path,
                 include_basemap=bundle_basemap_in_controller_archives,

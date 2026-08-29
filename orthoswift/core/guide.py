@@ -30,16 +30,16 @@ Your field analysis is complete. Read `spray_report.pdf` first, then use this gu
 |---|---|
 | `spray_report.pdf` | Spray report & prescription package summary — start here |
 | `prescriptions/fertilizer_zones/fertilizer_zones.kml` | Variable-rate management zones — open in Google Earth to review before applying |
-| `prescriptions/fertilizer_zones/controller_packages/dji_agras.zip` | DJI Agras fertilizer prescription package |
+| `prescriptions/fertilizer_zones/dji_agras.zip` | DJI Agras fertilizer prescription package |
 | `prescriptions/spray_targets/stress_patches.kml` | Spot-spray stress targets — red = severe, yellow = mild |
-| `prescriptions/spray_targets/controller_packages/dji_agras.zip` | DJI Agras spot-spray prescription package |
+| `prescriptions/spray_targets/dji_agras.zip` | DJI Agras spot-spray prescription package |
 | `technical_gis/rasters/` | GeoTIFF spectral layers (NDVI, NDRE, etc.) for GIS review |
 | `technical_gis/data_summaries/` | Zone statistics and canopy cover CSV exports |
 
 ## Loading Prescriptions (Single Machine)
 
 1. Open the `.kml` in Google Earth — confirm zones look correct before applying.
-2. Open `controller_packages/dji_agras.zip` in the relevant prescription folder.
+2. Open `dji_agras.zip` in the relevant prescription folder.
 3. Extract it so the `DJI/` folder is at the USB root.
 4. Import the prescription in the DJI Agras workflow and verify the rate raster, units, boundary, and controller preview before application.
 
