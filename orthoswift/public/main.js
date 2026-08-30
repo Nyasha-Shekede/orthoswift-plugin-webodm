@@ -43,28 +43,11 @@
       setStatus(status, '', '');
     }
 
-    function updateVisibility() {
-      var proj = (projInput && projInput.value ? projInput.value : '').trim();
-      var task = (taskInput && taskInput.value ? taskInput.value : '').trim();
-      var hasFile = !!(fileInput && fileInput.files && fileInput.files.length > 0);
-      var hasSelection = hasFile || (proj !== '' && task !== '');
-
-      if (button) {
-        button.style.display = hasSelection ? 'inline-block' : 'none';
-        if (hasSelection && !button.classList.contains('state-running') && !button.classList.contains('state-success')) {
-          resetToReady();
-        }
-      }
-    }
-
     if (fileInput) {
       fileInput.addEventListener('change', function() {
         resetToReady();
-        updateVisibility();
       });
     }
-
-    form.addEventListener('input', updateVisibility);
 
     // ── Rate plan toggle & labels ───────────────────────────────────────────
     var rateEnabledCb = document.querySelector('#osw-rate-enabled');
@@ -74,9 +57,10 @@
     var rateUnitSel   = document.querySelector('#osw-rate-unit');
     var minLabel      = document.querySelector('#osw-min-label');
     var maxLabel      = document.querySelector('#osw-max-label');
+    var rateLabel     = document.querySelector('#osw-rate-label');
 
     function updateRateToggle() {
-      var on = rateEnabledCb && rateEnabledCb.checked;
+      var on = !!(rateEnabledCb && rateEnabledCb.checked);
       if (rateToggle) {
         rateToggle.style.background = on ? '#22c55e' : 'rgba(255,255,255,0.1)';
         rateToggle.style.borderColor = on ? '#16a34a' : 'rgba(255,255,255,0.25)';
@@ -95,16 +79,17 @@
       if (maxLabel) maxLabel.textContent = 'Max rate (' + unit + ')';
     }
 
-    if (rateEnabledCb) rateEnabledCb.addEventListener('change', updateRateToggle);
-    if (rateUnitSel) rateUnitSel.addEventListener('change', updateRateUnitLabels);
-    if (rateToggle && rateToggle.parentElement) {
-      rateToggle.parentElement.addEventListener('click', function(e) {
-        if (e.target !== rateEnabledCb && rateEnabledCb) {
+    if (rateLabel) {
+      rateLabel.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (rateEnabledCb) {
           rateEnabledCb.checked = !rateEnabledCb.checked;
           updateRateToggle();
         }
       });
     }
+    if (rateEnabledCb) rateEnabledCb.addEventListener('change', updateRateToggle);
+    if (rateUnitSel) rateUnitSel.addEventListener('change', updateRateUnitLabels);
 
     updateRateToggle();
 
@@ -115,9 +100,10 @@
     var spotRateFields    = document.querySelector('#osw-spot-rate-fields');
     var spotRateUnitSel   = document.querySelector('#osw-spot-rate-unit');
     var spotTargetLabel   = document.querySelector('#osw-spot-target-label');
+    var spotRateLabel     = document.querySelector('#osw-spot-rate-label');
 
     function updateSpotRateToggle() {
-      var on = spotRateEnabledCb && spotRateEnabledCb.checked;
+      var on = !!(spotRateEnabledCb && spotRateEnabledCb.checked);
       if (spotRateToggle) {
         spotRateToggle.style.background = on ? '#22c55e' : 'rgba(255,255,255,0.1)';
         spotRateToggle.style.borderColor = on ? '#16a34a' : 'rgba(255,255,255,0.25)';
@@ -135,19 +121,20 @@
       if (spotTargetLabel) spotTargetLabel.textContent = 'Target application rate (' + unit + ')';
     }
 
-    if (spotRateEnabledCb) spotRateEnabledCb.addEventListener('change', updateSpotRateToggle);
-    if (spotRateUnitSel) spotRateUnitSel.addEventListener('change', updateSpotRateUnitLabels);
-    if (spotRateToggle && spotRateToggle.parentElement) {
-      spotRateToggle.parentElement.addEventListener('click', function(e) {
-        if (e.target !== spotRateEnabledCb && spotRateEnabledCb) {
+    if (spotRateLabel) {
+      spotRateLabel.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (spotRateEnabledCb) {
           spotRateEnabledCb.checked = !spotRateEnabledCb.checked;
           updateSpotRateToggle();
         }
       });
     }
+    if (spotRateEnabledCb) spotRateEnabledCb.addEventListener('change', updateSpotRateToggle);
+    if (spotRateUnitSel) spotRateUnitSel.addEventListener('change', updateSpotRateUnitLabels);
 
     updateSpotRateToggle();
-    updateVisibility();
+    resetToReady();
 
     // ── Polling Celery worker ───────────────────────────────────────────────
     async function pollWorker(id) {
