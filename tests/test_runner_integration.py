@@ -3,11 +3,15 @@ import json
 import zipfile
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pytest
 import rasterio
 from affine import Affine
+from shapely.geometry import box
 
+from orthoswift.core.decisions import ApplicationRatePlan
+from orthoswift.core.pipeline import _export_spot_controllers
 from orthoswift.runner import run, validate_config
 
 
@@ -67,7 +71,7 @@ def test_full_runner_outputs_all_visible_deliverables(tmp_path):
     assert progress[-1][1]==100
     with zipfile.ZipFile(result['archive']) as archive:
         names=archive.namelist()
-        assert any(name.endswith('spray_report.pdf') for name in names)
+        assert any(name.endswith('prescription_report.pdf') for name in names)
         controller_archives = {
             Path(name).name
             for name in names
@@ -146,3 +150,36 @@ def test_offline_basemap_flag_controls_controller_package_embedding(tmp_path):
                         )
 
         assert bool(embedded_basemaps) is enabled
+
+
+def test_relative_spot_targets_produce_a_reportable_summary(tmp_path):
+    hotspots = gpd.GeoDataFrame(
+        {
+            "hotspot_id": [1],
+            "area_m2": [100.0],
+            "mean_ndvi": [0.2],
+            "severity_rank": [1],
+            "threshold_ndvi": [0.3],
+        },
+        geometry=[box(500000, 0, 500010, 10)],
+        crs="EPSG:32633",
+    )
+    outputs = {}
+    (tmp_path / "summaries").mkdir()
+    summary = _export_spot_controllers(
+        hotspots=hotspots,
+        rate_plan=ApplicationRatePlan(),
+        rasters_dir=tmp_path / "rasters",
+        prescriptions_dir=tmp_path / "prescriptions",
+        summaries_dir=tmp_path / "summaries",
+        basemap_path=None,
+        include_basemap=False,
+        outputs=outputs,
+        extra_outputs={},
+    )
+
+    assert summary["mode"] == "relative"
+    assert summary["target_rate"] == 100.0
+    assert summary["background_rate"] == 0.0
+    assert summary["treated_area_ha"] == pytest.approx(0.01)
+    assert Path(outputs["spot_spray_rate_plan_json"]).is_file()

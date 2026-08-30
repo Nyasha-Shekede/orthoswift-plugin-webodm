@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 _FIELD_ACTION_GUIDE_SOURCE = """\
 # Setup Guide
 
-Your field analysis is complete. Read `spray_report.pdf` first, then use this guide to load prescriptions onto your machines.
+Your field analysis is complete. Read `prescription_report.pdf` first, then use this guide to load prescriptions onto your machines.
 
 ## What's in This Package
 
 | File / Folder | What it is |
 |---|---|
-| `spray_report.pdf` | Spray report & prescription package summary — start here |
+| `prescription_report.pdf` | Fertilizer and spray prescription package summary — start here |
 | `prescriptions/fertilizer_zones/fertilizer_zones.kml` | Variable-rate management zones — open in Google Earth to review before applying |
 | `prescriptions/fertilizer_zones/dji_agras.zip` | DJI Agras fertilizer prescription package |
 | `prescriptions/spray_targets/stress_patches.kml` | Spot-spray stress targets — red = severe, yellow = mild |
@@ -347,7 +347,7 @@ def export_guides(out_dir: str | Path) -> tuple[Optional[Path], Optional[Path]]:
     Stub — setup_guide.pdf has been retired.
 
     The Machine USB Loading Reference is now embedded directly in the official
-    Spray Report (report.py → build_agriculture_pdf). There is
+    Prescription Report (report.py → build_agriculture_pdf). There is
     no longer a separate setup guide deliverable.
     """
     logger.info("[guide] setup_guide.pdf generation skipped — USB reference is embedded in the main report.")

@@ -86,7 +86,7 @@ Depending on the available bands and quality-control gates, the archive contains
 - management-zone and stress-hotspot GeoJSON/KML/CSV layers;
 - DJI Agras fertilizer and spot-spray prescription ZIPs;
 - optional offline orthomosaic MBTiles;
-- `spray_report.pdf` (mission summary, tank-mix rates, and USB machine loading guide);
+- `prescription_report.pdf` (fertilizer and spot-spray summaries, field metrics, and USB machine loading guide);
 - rate-plan, input-band, methodology, validation, and warning audit files.
 
 DJI Agras exports are structural formats and require target-system verification.

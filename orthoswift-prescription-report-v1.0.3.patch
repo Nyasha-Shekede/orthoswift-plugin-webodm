@@ -1,0 +1,508 @@
+diff --git a/README.md b/README.md
+index ef83344..b7fca8c 100644
+--- a/README.md
++++ b/README.md
+@@ -86,7 +86,7 @@ Depending on the available bands and quality-control gates, the archive contains
+ - management-zone and stress-hotspot GeoJSON/KML/CSV layers;
+ - DJI Agras fertilizer and spot-spray prescription ZIPs;
+ - optional offline orthomosaic MBTiles;
+-- `spray_report.pdf` (mission summary, tank-mix rates, and USB machine loading guide);
++- `prescription_report.pdf` (fertilizer and spot-spray summaries, field metrics, and USB machine loading guide);
+ - rate-plan, input-band, methodology, validation, and warning audit files.
+ 
+ DJI Agras exports are structural formats and require target-system verification.
+diff --git a/orthoswift/core/guide.py b/orthoswift/core/guide.py
+index 6445885..7084e9d 100644
+--- a/orthoswift/core/guide.py
++++ b/orthoswift/core/guide.py
+@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
+ _FIELD_ACTION_GUIDE_SOURCE = """\
+ # Setup Guide
+ 
+-Your field analysis is complete. Read `spray_report.pdf` first, then use this guide to load prescriptions onto your machines.
++Your field analysis is complete. Read `prescription_report.pdf` first, then use this guide to load prescriptions onto your machines.
+ 
+ ## What's in This Package
+ 
+ | File / Folder | What it is |
+ |---|---|
+-| `spray_report.pdf` | Spray report & prescription package summary — start here |
++| `prescription_report.pdf` | Fertilizer and spray prescription package summary — start here |
+ | `prescriptions/fertilizer_zones/fertilizer_zones.kml` | Variable-rate management zones — open in Google Earth to review before applying |
+ | `prescriptions/fertilizer_zones/dji_agras.zip` | DJI Agras fertilizer prescription package |
+ | `prescriptions/spray_targets/stress_patches.kml` | Spot-spray stress targets — red = severe, yellow = mild |
+@@ -347,7 +347,7 @@ def export_guides(out_dir: str | Path) -> tuple[Optional[Path], Optional[Path]]:
+     Stub — setup_guide.pdf has been retired.
+ 
+     The Machine USB Loading Reference is now embedded directly in the official
+-    Spray Report (report.py → build_agriculture_pdf). There is
++    Prescription Report (report.py → build_agriculture_pdf). There is
+     no longer a separate setup guide deliverable.
+     """
+     logger.info("[guide] setup_guide.pdf generation skipped — USB reference is embedded in the main report.")
+diff --git a/orthoswift/core/pipeline.py b/orthoswift/core/pipeline.py
+index 18c6d8b..131498b 100644
+--- a/orthoswift/core/pipeline.py
++++ b/orthoswift/core/pipeline.py
+@@ -1223,7 +1223,6 @@ def _export_spot_controllers(
+     prescription.drop(columns=["geometry"]).to_csv(summary_path, index=False)
+     outputs["spot_spray_summary_csv"] = str(summary_path)
+ 
+-    summary = None
+     if physical:
+         summary = _physical_spot_summary(
+             spot_spray_gdf=prescription,
+@@ -1232,6 +1231,22 @@ def _export_spot_controllers(
+             rate_plan=rate_plan,
+             summaries_dir=summaries_dir,
+         )
++    else:
++        summary = {
++            "mode": "relative",
++            "operation": "spray",
++            "strategy": "target_hotspots",
++            "unit": "PCT",
++            "target_rate": 100.0,
++            "background_rate": 0.0,
++            "treated_area_ha": round(_spot_treated_area_hectares(prescription), 4),
++            "estimated_total_product": None,
++            "operator_review_required": True,
++        }
++        _write_json(summaries_dir / "spot_spray_rate_plan.json", summary)
++    outputs["spot_spray_rate_plan_json"] = str(
++        summaries_dir / "spot_spray_rate_plan.json"
++    )
+     controller_dir = spot_dir
+     package = export_dji_agras_prescription_zip(
+         prescription,
+@@ -1350,6 +1365,7 @@ def _build_report_and_audit(
+     crop_qc_metrics,
+     warnings,
+     progress_callback,
++    offline_basemap_included,
+ ):
+     action_coverage_summary = None
+     primary_index = feature_names[0]
+@@ -1396,7 +1412,7 @@ def _build_report_and_audit(
+             "small or fragmented areas may have been excluded to keep exported files practical for equipment and field use."
+         )
+ 
+-    zone_rows = [["Zone", "Priority", "Area m²", "Crop score"]]
++    zone_rows = [["Zone", "Relative vigor", "Area m²", "Crop score"]]
+     if zones is not None and len(zones):
+         for _, r in zones.iterrows():
+             mean_ndvi = r.get("ndvi_mean", None)
+@@ -1439,7 +1455,7 @@ def _build_report_and_audit(
+                 ]
+             )
+ 
+-    pdf_path = out_dir / "spray_report.pdf"
++    pdf_path = out_dir / "prescription_report.pdf"
+     disclaimer_notes = []
+     if not absolute_reflectance_valid:
+         disclaimer_notes.append(
+@@ -1468,6 +1484,10 @@ def _build_report_and_audit(
+         fertilizer_rate_summary=fertilizer_rate_summary,
+         spot_spray_rate_summary=spot_spray_rate_summary,
+         disclaimer=custom_disclaimer,
++        offline_basemap_included=offline_basemap_included,
++        controller_packages_available=bool(
++            outputs.get("dji_agras_vra_zip") or outputs.get("spot_spray_dji_agras_vra_zip")
++        ),
+     )
+     outputs["pdf_report"] = str(pdf_path)
+ 
+@@ -1805,4 +1825,5 @@ def run_agriculture_pipeline(
+         crop_qc_metrics=crop_qc_metrics,
+         warnings=warnings,
+         progress_callback=progress_callback,
++        offline_basemap_included=bundle_basemap_in_controller_archives,
+     )
+diff --git a/orthoswift/core/report.py b/orthoswift/core/report.py
+index a9671d7..565b04b 100644
+--- a/orthoswift/core/report.py
++++ b/orthoswift/core/report.py
+@@ -105,7 +105,7 @@ def _draw_footer(canvas_obj, doc):
+     canvas_obj.setFont("Helvetica-Oblique", 8)
+     canvas_obj.setFillColor(colors.HexColor("#666666"))
+ 
+-    footer_text = "Generated by OrthoSWIFT | Spray & Application Prescriptions | www.orthoswift.net"
++    footer_text = "Generated by OrthoSWIFT | Fertilizer & Spray Prescriptions | www.orthoswift.net"
+     width, _height = doc.pagesize
+     footer_width = canvas_obj.stringWidth(footer_text, "Helvetica-Oblique", 8)
+     footer_x = (width - footer_width) / 2
+@@ -126,8 +126,10 @@ def build_agriculture_pdf(
+     fertilizer_rate_summary: Optional[dict] = None,
+     spot_spray_rate_summary: Optional[dict] = None,
+     disclaimer: Optional[str] = None,
++    offline_basemap_included: bool = False,
++    controller_packages_available: bool = False,
+ ) -> Path:
+-    """Build brief, operator-ready spray report."""
++    """Build an operator-ready fertilizer and spot-spray prescription report."""
+     s = _styles()
+     doc = SimpleDocTemplate(
+         str(out_path),
+@@ -140,8 +142,8 @@ def build_agriculture_pdf(
+     story = []
+ 
+     # Title & Subtitle
+-    story.append(Paragraph("Spray Report", s["H1"]))
+-    story.append(Paragraph("Precision prescription package & tank-mix summary", s["Small"]))
++    story.append(Paragraph("Prescription Report", s["H1"]))
++    story.append(Paragraph("Fertilizer zones, spot-spray targets & controller package summary", s["Small"]))
+     story.append(Spacer(1, 4))
+ 
+     # Dual Map Previews (Compact)
+@@ -153,80 +155,115 @@ def build_agriculture_pdf(
+     ]
+     story.append(Table([imgs], hAlign="LEFT"))
+     story.append(Paragraph(
+-        "Left: RGB field basemap. Right: Prescription spray zones & targets.",
++        "Left: RGB orthomosaic preview. Right: vegetation-index preview (NDVI when available).",
+         s["Small"],
+     ))
+     story.append(Spacer(1, 5))
+ 
+-    # Application & Tank-Mix Summary Table
+-    summary_rows = [["Application & Coverage Metric", "Plan Value"]]
+-
+-    rate_summary = spot_spray_rate_summary or fertilizer_rate_summary or {}
+-    mode = str(rate_summary.get("mode", "relative"))
+-    product = rate_summary.get("product_name")
+-
+-    if product:
+-        summary_rows.append(["Product", str(product)])
+-
+-    if mode == "physical":
+-        if "target_rate" in rate_summary:
+-            summary_rows.append(["Target Application Rate", f"{float(rate_summary.get('target_rate', 0)):g} {rate_summary.get('unit', '')}"])
+-        elif "resolved_min_rate" in rate_summary:
+-            summary_rows.append(["Prescribed Rate Range", f"{float(rate_summary.get('resolved_min_rate', 0)):g}–{float(rate_summary.get('resolved_max_rate', 0)):g} {rate_summary.get('unit', '')}"])
+-
+-        if rate_summary.get("estimated_total_product") is not None:
+-            summary_rows.append(["Total Product to Mix in Tank", f"{float(rate_summary['estimated_total_product']):,.2f} {rate_summary.get('total_product_unit', '')}"])
+-
+-        if rate_summary.get("approved_by"):
+-            summary_rows.append(["Plan Approved By", str(rate_summary["approved_by"])])
+-    else:
+-        summary_rows.append(["Application Mode", "Relative 0–100% intensity (set tank rate on machine)"])
+-
++    # Field-level metrics are independent of either prescription operation.
++    field_rows = [["Field Metric", "Value"]]
+     if coverage_metrics:
+         usable_area_m2 = coverage_metrics.get("usable_field_area_m2")
+-        action_area_m2 = coverage_metrics.get("recommended_action_zone_area_m2")
++        mapped_area_m2 = coverage_metrics.get("recommended_action_zone_area_m2")
+         if usable_area_m2 is not None:
+-            usable_ha = float(usable_area_m2) / 10000.0
+-            summary_rows.append(["Total Field Area", f"{usable_ha:.2f} ha ({float(usable_area_m2):,.0f} m²)"])
+-        if action_area_m2 is not None and usable_area_m2:
+-            action_ha = float(action_area_m2) / 10000.0
+-            action_pct = (float(action_area_m2) / float(usable_area_m2)) * 100.0
+-            savings_pct = max(0.0, 100.0 - action_pct)
+-            summary_rows.append(["Targeted Treatment Area", f"{action_ha:.2f} ha ({action_pct:.1f}% of field)"])
+-            if savings_pct > 0.1:
+-                summary_rows.append(["Chemical / Area Savings vs Broadcast", f"{savings_pct:.1f}% reduction"])
+-    elif rate_summary.get("treated_area_ha") is not None:
+-        summary_rows.append(["Targeted Treatment Area", f"{float(rate_summary['treated_area_ha']):.2f} ha"])
+-
+-    story.append(Paragraph("Application & Tank-Mix Summary", s["H2"]))
+-    story.append(_table(summary_rows, col_widths=[90 * mm, 90 * mm]))
++            field_rows.append([
++                "Analyzed Field Area",
++                f"{float(usable_area_m2) / 10000.0:.2f} ha ({float(usable_area_m2):,.0f} m²)",
++            ])
++        if mapped_area_m2 is not None:
++            field_rows.append([
++                "Mapped Management-Zone Area",
++                f"{float(mapped_area_m2) / 10000.0:.2f} ha ({float(mapped_area_m2):,.0f} m²)",
++            ])
++    if canopy_cover_pct is not None:
++        field_rows.append(["Estimated Canopy Cover", f"{float(canopy_cover_pct):.1f}%"])
++    if zone_table and len(zone_table) > 1:
++        field_rows.append(["Fertilizer Management Zones", str(len(zone_table) - 1)])
++    if hotspot_table and len(hotspot_table) > 1:
++        field_rows.append(["Spot-Spray / Scouting Targets", str(len(hotspot_table) - 1)])
++    story.append(Paragraph("Field Summary", s["H2"]))
++    story.append(_table(field_rows, col_widths=[90 * mm, 90 * mm]))
+     story.append(Spacer(1, 5))
+ 
++    def plan_rows(summary, operation):
++        rows = [["Plan Metric", "Plan Value"]]
++        if not summary:
++            rows.append(["Status", "No prescription summary was produced"])
++            return rows
++        mode = str(summary.get("mode", "relative"))
++        rows.append(["Application Mode", "Physical rate plan" if mode == "physical" else "Relative intensity"])
++        if summary.get("product_name"):
++            rows.append(["Product", str(summary["product_name"])])
++        if summary.get("strategy"):
++            rows.append(["Strategy", str(summary["strategy"]).replace("_", " ").title()])
++        unit = str(summary.get("unit", ""))
++        if operation == "fertilizer":
++            minimum = summary.get("resolved_min_rate")
++            maximum = summary.get("resolved_max_rate")
++            if minimum is not None and maximum is not None:
++                label = "Prescribed Rate Range" if mode == "physical" else "Prescribed Intensity Range"
++                rows.append([label, f"{float(minimum):g}–{float(maximum):g} {unit}"])
++        else:
++            target = summary.get("target_rate")
++            background = summary.get("background_rate", 0)
++            if target is not None:
++                rows.append(["Target / Background Rate", f"{float(target):g} / {float(background):g} {unit}"])
++        if summary.get("treated_area_ha") is not None:
++            rows.append(["Treated Area", f"{float(summary['treated_area_ha']):.2f} ha"])
++        if summary.get("estimated_total_product") is not None:
++            rows.append([
++                "Estimated Total Product",
++                f"{float(summary['estimated_total_product']):,.2f} {summary.get('total_product_unit', '')}",
++            ])
++        if summary.get("approved_by"):
++            rows.append(["Plan Approved By", str(summary["approved_by"])])
++        return rows
++
++    story.append(Paragraph("Fertilizer Prescription Summary", s["H2"]))
++    story.append(_table(plan_rows(fertilizer_rate_summary, "fertilizer"), col_widths=[90 * mm, 90 * mm]))
++    story.append(Spacer(1, 5))
++
++    if spot_spray_rate_summary:
++        story.append(Paragraph("Spot-Spray Prescription Summary", s["H2"]))
++        story.append(_table(plan_rows(spot_spray_rate_summary, "spray"), col_widths=[90 * mm, 90 * mm]))
++        story.append(Spacer(1, 5))
++
+     # Prescription Zones Table
+     if zone_table and len(zone_table) > 1:
+-        story.append(Paragraph("Prescription Zones", s["H2"]))
++        story.append(Paragraph("Fertilizer Management Zones", s["H2"]))
+         story.append(_table(zone_table))
+         story.append(Spacer(1, 5))
+ 
+     # Ground Scouting Checkpoints (Hotspots) - Keep top 5 max for brevity
+     if hotspot_table and len(hotspot_table) > 1:
+-        story.append(Paragraph("Pre-Spray Ground Scouting Checkpoints", s["H2"]))
++        story.append(Paragraph("Spot-Spray & Ground-Scouting Targets", s["H2"]))
+         compact_hotspots = [hotspot_table[0]] + hotspot_table[1:6]
+         story.append(_table(compact_hotspots))
+         story.append(Spacer(1, 5))
+ 
+     # Machine USB Setup & Quick-Load Reference
+-    setup_rows = [
+-        ["System", "ZIP Package", "USB Destination Path"],
+-        ["DJI Agras", "dji_agras.zip", "USB:/DJI/"],
+-    ]
+-    story.append(Paragraph("Machine USB Loading Reference", s["H2"]))
+-    story.append(_table(setup_rows, col_widths=[60 * mm, 60 * mm, 66 * mm]))
+-    story.append(Paragraph(
+-        "Extract `dji_agras.zip` so its DJI folder is at the USB root. "
+-        "Each ZIP includes Basemap/orthomosaic.mbtiles for in-cab offline field imagery.",
+-        s["Small"],
+-    ))
++    if controller_packages_available:
++        setup_rows = [
++            ["System", "ZIP Package", "USB Destination Path"],
++            ["DJI Agras", "dji_agras.zip", "USB:/DJI/"],
++        ]
++        story.append(Paragraph("Machine USB Loading Reference", s["H2"]))
++        story.append(_table(setup_rows, col_widths=[60 * mm, 60 * mm, 66 * mm]))
++        basemap_note = (
++            "The exported controller ZIP includes Basemap/orthomosaic.mbtiles for offline field imagery."
++            if offline_basemap_included
++            else "Offline MBTiles were disabled; the exported controller ZIP does not include a basemap."
++        )
++        story.append(Paragraph(
++            "Extract `dji_agras.zip` so its DJI folder is at the USB root. " + basemap_note,
++            s["Small"],
++        ))
++    else:
++        story.append(Paragraph("Controller Package Status", s["H2"]))
++        story.append(Paragraph(
++            "No machine controller package was produced. Review the operational notices and processing warnings before field use.",
++            s["Small"],
++        ))
+     story.append(Spacer(1, 5))
+ 
+     # Operational Notice & Disclaimers
+@@ -236,7 +273,7 @@ def build_agriculture_pdf(
+         story.append(Spacer(1, 2))
+     story.append(Paragraph(
+         "Prescriptions are formatted for DJI Agras workflows. "
+-        "Verify product labels, tank mix calibration, drift conditions, and machine boundaries before applying.",
++        "Verify agronomic rates, product labels, equipment calibration, field boundaries, and spray conditions before applying.",
+         s["Small"],
+     ))
+ 
+diff --git a/orthoswift/templates/index.html b/orthoswift/templates/index.html
+index 945abcd..6a2c50a 100644
+--- a/orthoswift/templates/index.html
++++ b/orthoswift/templates/index.html
+@@ -36,9 +36,9 @@
+           <td class="osw-td-use">Pinpoints lowest-performing field zones for targeted ground scouting.</td>
+         </tr>
+         <tr>
+-          <td class="osw-td-label">Spray Report</td>
++          <td class="osw-td-label">Prescription Report</td>
+           <td class="osw-td-format">PDF + PNG map</td>
+-          <td class="osw-td-use">Ready-to-share report combining zone maps, cover stats, and scouting targets.</td>
++          <td class="osw-td-use">Ready-to-share report covering fertilizer rates and zones, spot-spray targets, field metrics, and controller loading.</td>
+         </tr>
+         <tr>
+           <td class="osw-td-label">Technical GIS &amp; Audit Data</td>
+diff --git a/tests/test_report_content.py b/tests/test_report_content.py
+new file mode 100644
+index 0000000..09b536b
+--- /dev/null
++++ b/tests/test_report_content.py
+@@ -0,0 +1,86 @@
++from PIL import Image as PILImage
++from reportlab.lib.pagesizes import A4
++from reportlab.platypus import Paragraph, Table
++
++from orthoswift.core import report
++
++
++def _story_text(story):
++    values = []
++    for item in story:
++        if isinstance(item, Paragraph):
++            values.append(item.text)
++        elif isinstance(item, Table):
++            values.extend(str(cell) for row in item._cellvalues for cell in row)
++    return "\n".join(values)
++
++
++def test_prescription_report_keeps_fertilizer_and_spot_spray_separate(tmp_path, monkeypatch):
++    captured = {}
++
++    class Document:
++        pagesize = A4
++
++        def __init__(self, *args, **kwargs):
++            pass
++
++        def build(self, story, **kwargs):
++            captured["story"] = story
++
++    monkeypatch.setattr(report, "SimpleDocTemplate", Document)
++    preview = tmp_path / "preview.png"
++    PILImage.new("RGB", (20, 20), "green").save(preview)
++
++    report.build_agriculture_pdf(
++        tmp_path / "prescription_report.pdf",
++        ortho_preview=preview,
++        ndvi_preview=preview,
++        zone_table=[["Zone", "Relative vigor"], [1, "Low"]],
++        hotspot_table=[["Target", "Area m²"], [1, 250]],
++        canopy_cover_pct=72.5,
++        coverage_metrics={
++            "usable_field_area_m2": 20_000,
++            "recommended_action_zone_area_m2": 18_000,
++        },
++        fertilizer_rate_summary={
++            "mode": "physical",
++            "operation": "fertilizer",
++            "product_name": "Urea 46-0-0",
++            "strategy": "inverse",
++            "unit": "KG_HA",
++            "resolved_min_rate": 100,
++            "resolved_max_rate": 180,
++            "treated_area_ha": 1.8,
++            "estimated_total_product": 252,
++            "total_product_unit": "KG",
++            "approved_by": "Agronomist",
++        },
++        spot_spray_rate_summary={
++            "mode": "physical",
++            "operation": "spray",
++            "product_name": "Herbicide",
++            "strategy": "target_hotspots",
++            "unit": "L_HA",
++            "target_rate": 2,
++            "background_rate": 0,
++            "treated_area_ha": 0.025,
++            "estimated_total_product": 0.05,
++            "total_product_unit": "L",
++            "approved_by": "Operator",
++        },
++        offline_basemap_included=False,
++        controller_packages_available=True,
++    )
++
++    text = _story_text(captured["story"])
++    assert "Prescription Report" in text
++    assert "Fertilizer Prescription Summary" in text
++    assert "Spot-Spray Prescription Summary" in text
++    assert "Urea 46-0-0" in text
++    assert "Herbicide" in text
++    assert "100–180 KG_HA" in text
++    assert "2 / 0 L_HA" in text
++    assert "Estimated Canopy Cover" in text
++    assert "Offline MBTiles were disabled" in text
++    assert "Chemical / Area Savings" not in text
++    assert "Spray Report" not in text
+diff --git a/tests/test_runner_integration.py b/tests/test_runner_integration.py
+index 7ec4221..0c06e7f 100644
+--- a/tests/test_runner_integration.py
++++ b/tests/test_runner_integration.py
+@@ -3,11 +3,15 @@ import json
+ import zipfile
+ from pathlib import Path
+ 
++import geopandas as gpd
+ import numpy as np
+ import pytest
+ import rasterio
+ from affine import Affine
++from shapely.geometry import box
+ 
++from orthoswift.core.decisions import ApplicationRatePlan
++from orthoswift.core.pipeline import _export_spot_controllers
+ from orthoswift.runner import run, validate_config
+ 
+ 
+@@ -67,7 +71,7 @@ def test_full_runner_outputs_all_visible_deliverables(tmp_path):
+     assert progress[-1][1]==100
+     with zipfile.ZipFile(result['archive']) as archive:
+         names=archive.namelist()
+-        assert any(name.endswith('spray_report.pdf') for name in names)
++        assert any(name.endswith('prescription_report.pdf') for name in names)
+         controller_archives = {
+             Path(name).name
+             for name in names
+@@ -146,3 +150,36 @@ def test_offline_basemap_flag_controls_controller_package_embedding(tmp_path):
+                         )
+ 
+         assert bool(embedded_basemaps) is enabled
++
++
++def test_relative_spot_targets_produce_a_reportable_summary(tmp_path):
++    hotspots = gpd.GeoDataFrame(
++        {
++            "hotspot_id": [1],
++            "area_m2": [100.0],
++            "mean_ndvi": [0.2],
++            "severity_rank": [1],
++            "threshold_ndvi": [0.3],
++        },
++        geometry=[box(500000, 0, 500010, 10)],
++        crs="EPSG:32633",
++    )
++    outputs = {}
++    (tmp_path / "summaries").mkdir()
++    summary = _export_spot_controllers(
++        hotspots=hotspots,
++        rate_plan=ApplicationRatePlan(),
++        rasters_dir=tmp_path / "rasters",
++        prescriptions_dir=tmp_path / "prescriptions",
++        summaries_dir=tmp_path / "summaries",
++        basemap_path=None,
++        include_basemap=False,
++        outputs=outputs,
++        extra_outputs={},
++    )
++
++    assert summary["mode"] == "relative"
++    assert summary["target_rate"] == 100.0
++    assert summary["background_rate"] == 0.0
++    assert summary["treated_area_ha"] == pytest.approx(0.01)
++    assert Path(outputs["spot_spray_rate_plan_json"]).is_file()

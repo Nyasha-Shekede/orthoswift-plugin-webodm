@@ -1223,7 +1223,6 @@ def _export_spot_controllers(
     prescription.drop(columns=["geometry"]).to_csv(summary_path, index=False)
     outputs["spot_spray_summary_csv"] = str(summary_path)
 
-    summary = None
     if physical:
         summary = _physical_spot_summary(
             spot_spray_gdf=prescription,
@@ -1232,6 +1231,22 @@ def _export_spot_controllers(
             rate_plan=rate_plan,
             summaries_dir=summaries_dir,
         )
+    else:
+        summary = {
+            "mode": "relative",
+            "operation": "spray",
+            "strategy": "target_hotspots",
+            "unit": "PCT",
+            "target_rate": 100.0,
+            "background_rate": 0.0,
+            "treated_area_ha": round(_spot_treated_area_hectares(prescription), 4),
+            "estimated_total_product": None,
+            "operator_review_required": True,
+        }
+        _write_json(summaries_dir / "spot_spray_rate_plan.json", summary)
+    outputs["spot_spray_rate_plan_json"] = str(
+        summaries_dir / "spot_spray_rate_plan.json"
+    )
     controller_dir = spot_dir
     package = export_dji_agras_prescription_zip(
         prescription,
@@ -1350,6 +1365,7 @@ def _build_report_and_audit(
     crop_qc_metrics,
     warnings,
     progress_callback,
+    offline_basemap_included,
 ):
     action_coverage_summary = None
     primary_index = feature_names[0]
@@ -1396,7 +1412,7 @@ def _build_report_and_audit(
             "small or fragmented areas may have been excluded to keep exported files practical for equipment and field use."
         )
 
-    zone_rows = [["Zone", "Priority", "Area m²", "Crop score"]]
+    zone_rows = [["Zone", "Relative vigor", "Area m²", "Crop score"]]
     if zones is not None and len(zones):
         for _, r in zones.iterrows():
             mean_ndvi = r.get("ndvi_mean", None)
@@ -1439,7 +1455,7 @@ def _build_report_and_audit(
                 ]
             )
 
-    pdf_path = out_dir / "spray_report.pdf"
+    pdf_path = out_dir / "prescription_report.pdf"
     disclaimer_notes = []
     if not absolute_reflectance_valid:
         disclaimer_notes.append(
@@ -1468,6 +1484,10 @@ def _build_report_and_audit(
         fertilizer_rate_summary=fertilizer_rate_summary,
         spot_spray_rate_summary=spot_spray_rate_summary,
         disclaimer=custom_disclaimer,
+        offline_basemap_included=offline_basemap_included,
+        controller_packages_available=bool(
+            outputs.get("dji_agras_vra_zip") or outputs.get("spot_spray_dji_agras_vra_zip")
+        ),
     )
     outputs["pdf_report"] = str(pdf_path)
 
@@ -1805,4 +1825,5 @@ def run_agriculture_pipeline(
         crop_qc_metrics=crop_qc_metrics,
         warnings=warnings,
         progress_callback=progress_callback,
+        offline_basemap_included=bundle_basemap_in_controller_archives,
     )
