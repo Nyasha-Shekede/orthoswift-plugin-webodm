@@ -29,6 +29,7 @@
     var status = form.querySelector('#osw-status');
     var button = form.querySelector('#osw-run');
     var fileInput = form.querySelector('#osw-file-input');
+    var offlineBasemapInput = form.querySelector('#osw-offline-basemap');
     var projInput = form.querySelector('[name=project_id]');
     var taskInput = form.querySelector('[name=task_id]');
     var latestDownloadUrl = null;
@@ -232,12 +233,13 @@
           };
         }
 
+        var offlineBasemap = !!(offlineBasemapInput && offlineBasemapInput.checked);
         var response;
         if (file) {
           var uploadData = new FormData();
           uploadData.append('orthomosaic_file', file);
           uploadData.append('zones', 3);
-          uploadData.append('offline_basemap', 'true');
+          uploadData.append('offline_basemap', String(offlineBasemap));
           if (ratePlan) {
             uploadData.append('fertilizer_rate_plan', JSON.stringify(ratePlan));
           }
@@ -256,7 +258,7 @@
             project_id: proj,
             task_id: task,
             zones: 3,
-            offline_basemap: true,
+            offline_basemap: offlineBasemap,
             fertilizer_rate_plan: ratePlan,
             spot_spray_rate_plan: spotRatePlan
           };

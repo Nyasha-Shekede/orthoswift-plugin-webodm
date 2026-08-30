@@ -479,6 +479,30 @@
 .osw-field-row { margin-bottom: 12px; }
 .osw-upload-field { max-width: 720px; }
 
+
+/* Offline basemap performance option */
+.osw-basemap-option {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 24px;
+  cursor: pointer;
+}
+.osw-basemap-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+  accent-color: #22c55e;
+}
+.osw-basemap-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.osw-basemap-option strong { font-size: 13px; }
+
 /* Native checkbox switches remain usable with a keyboard and without JavaScript. */
 .osw-switch-label {
   position: relative;

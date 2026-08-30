@@ -47,3 +47,15 @@ def test_webodm_page_loads_plugin_assets_and_keeps_controls_operable():
     assert "#osw-run {\n  display: none" not in stylesheet
     assert "rateEnabledCb.addEventListener('change', updateRateToggle)" in controller
     assert "spotRateEnabledCb.addEventListener('change', updateSpotRateToggle)" in controller
+
+
+def test_offline_basemap_option_is_wired_to_both_request_formats():
+    template = (ROOT / "orthoswift/templates/index.html").read_text(encoding="utf-8")
+    controller = (ROOT / "orthoswift/public/main.js").read_text(encoding="utf-8")
+
+    assert 'id="osw-offline-basemap" checked' in template
+    assert "var offlineBasemap = !!(offlineBasemapInput && offlineBasemapInput.checked)" in controller
+    assert "uploadData.append('offline_basemap', String(offlineBasemap))" in controller
+    assert "offline_basemap: offlineBasemap" in controller
+    assert "uploadData.append('offline_basemap', 'true')" not in controller
+    assert "offline_basemap: true" not in controller

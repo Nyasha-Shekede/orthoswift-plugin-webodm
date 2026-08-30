@@ -1,3 +1,4 @@
+import io
 import json
 import zipfile
 from pathlib import Path
@@ -122,3 +123,26 @@ def test_pipeline_does_not_return_deleted_basemap_staging_path(tmp_path, monkeyp
         bundle_basemap_in_controller_archives=True,
     )
     assert 'offline_basemap_mbtiles' not in outputs
+
+
+def test_offline_basemap_flag_controls_controller_package_embedding(tmp_path):
+    raster = write_multispectral(tmp_path / "m.tif", 90)
+
+    for enabled in (False, True):
+        result = run({
+            "out_dir": str(tmp_path / f"out-{enabled}"),
+            "orthomosaic_path": str(raster),
+            "zones": 3,
+            "offline_basemap": enabled,
+        })
+        embedded_basemaps = []
+        with zipfile.ZipFile(result["archive"]) as deliverables:
+            for name in deliverables.namelist():
+                if name.endswith(".zip"):
+                    with zipfile.ZipFile(io.BytesIO(deliverables.read(name))) as controller:
+                        embedded_basemaps.extend(
+                            member for member in controller.namelist()
+                            if member.endswith(".mbtiles")
+                        )
+
+        assert bool(embedded_basemaps) is enabled
