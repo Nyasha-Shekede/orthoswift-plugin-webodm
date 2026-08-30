@@ -8,7 +8,6 @@ Adds two deterministic exports:
     * XYZ/CSV elevation grid from a DEM
     * KML export from existing polygon GeoDataFrames
 
-No user-defined geometry. No prescription rates. No AI.
 """
 from __future__ import annotations
 

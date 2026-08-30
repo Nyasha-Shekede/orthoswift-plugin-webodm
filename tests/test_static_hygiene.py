@@ -31,3 +31,19 @@ def test_visible_interface_files_are_present_and_template_self_contained():
     assert '<script>' not in template
     assert (ROOT/'orthoswift/public/main.js').exists()
     assert (ROOT/'orthoswift/public/style.css').exists()
+
+def test_webodm_page_loads_plugin_assets_and_keeps_controls_operable():
+    template = (ROOT / "orthoswift/templates/index.html").read_text(encoding="utf-8")
+    stylesheet = (ROOT / "orthoswift/public/style.css").read_text(encoding="utf-8")
+    controller = (ROOT / "orthoswift/public/main.js").read_text(encoding="utf-8")
+
+    assert template.startswith('{% extends "app/plugins/templates/base.html" %}')
+    assert "{% block content %}" in template
+    assert "{% endblock %}" in template
+    assert "<style" not in template
+    assert 'class="osw-switch-input"' in template
+    assert 'aria-controls="osw-rate-fields"' in template
+    assert 'aria-controls="osw-spot-rate-fields"' in template
+    assert "#osw-run {\n  display: none" not in stylesheet
+    assert "rateEnabledCb.addEventListener('change', updateRateToggle)" in controller
+    assert "spotRateEnabledCb.addEventListener('change', updateSpotRateToggle)" in controller

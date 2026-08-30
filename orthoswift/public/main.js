@@ -26,9 +26,9 @@
     if (form.dataset.oswInitialized) return;
     form.dataset.oswInitialized = 'true';
 
-    var status = document.querySelector('#osw-status');
-    var button = document.querySelector('#osw-run');
-    var fileInput = document.querySelector('#osw-file-input');
+    var status = form.querySelector('#osw-status');
+    var button = form.querySelector('#osw-run');
+    var fileInput = form.querySelector('#osw-file-input');
     var projInput = form.querySelector('[name=project_id]');
     var taskInput = form.querySelector('[name=task_id]');
     var latestDownloadUrl = null;
@@ -50,14 +50,13 @@
     }
 
     // ── Rate plan toggle & labels ───────────────────────────────────────────
-    var rateEnabledCb = document.querySelector('#osw-rate-enabled');
-    var rateToggle    = document.querySelector('#osw-rate-toggle');
-    var rateKnob      = document.querySelector('#osw-rate-knob');
-    var rateFields    = document.querySelector('#osw-rate-fields');
-    var rateUnitSel   = document.querySelector('#osw-rate-unit');
-    var minLabel      = document.querySelector('#osw-min-label');
-    var maxLabel      = document.querySelector('#osw-max-label');
-    var rateLabel     = document.querySelector('#osw-rate-label');
+    var rateEnabledCb = form.querySelector('#osw-rate-enabled');
+    var rateToggle    = form.querySelector('#osw-rate-toggle');
+    var rateKnob      = form.querySelector('#osw-rate-knob');
+    var rateFields    = form.querySelector('#osw-rate-fields');
+    var rateUnitSel   = form.querySelector('#osw-rate-unit');
+    var minLabel      = form.querySelector('#osw-min-label');
+    var maxLabel      = form.querySelector('#osw-max-label');
 
     function updateRateToggle() {
       var on = !!(rateEnabledCb && rateEnabledCb.checked);
@@ -70,6 +69,7 @@
       }
       if (rateFields) {
         rateFields.style.display = on ? 'block' : 'none';
+        rateFields.setAttribute('aria-hidden', on ? 'false' : 'true');
       }
     }
 
@@ -79,28 +79,19 @@
       if (maxLabel) maxLabel.textContent = 'Max rate (' + unit + ')';
     }
 
-    if (rateLabel) {
-      rateLabel.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (rateEnabledCb) {
-          rateEnabledCb.checked = !rateEnabledCb.checked;
-          updateRateToggle();
-        }
-      });
-    }
     if (rateEnabledCb) rateEnabledCb.addEventListener('change', updateRateToggle);
     if (rateUnitSel) rateUnitSel.addEventListener('change', updateRateUnitLabels);
 
     updateRateToggle();
+    updateRateUnitLabels();
 
     // ── Spot Spray Rate plan toggle & labels ────────────────────────────────
-    var spotRateEnabledCb = document.querySelector('#osw-spot-rate-enabled');
-    var spotRateToggle    = document.querySelector('#osw-spot-rate-toggle');
-    var spotRateKnob      = document.querySelector('#osw-spot-rate-knob');
-    var spotRateFields    = document.querySelector('#osw-spot-rate-fields');
-    var spotRateUnitSel   = document.querySelector('#osw-spot-rate-unit');
-    var spotTargetLabel   = document.querySelector('#osw-spot-target-label');
-    var spotRateLabel     = document.querySelector('#osw-spot-rate-label');
+    var spotRateEnabledCb = form.querySelector('#osw-spot-rate-enabled');
+    var spotRateToggle    = form.querySelector('#osw-spot-rate-toggle');
+    var spotRateKnob      = form.querySelector('#osw-spot-rate-knob');
+    var spotRateFields    = form.querySelector('#osw-spot-rate-fields');
+    var spotRateUnitSel   = form.querySelector('#osw-spot-rate-unit');
+    var spotTargetLabel   = form.querySelector('#osw-spot-target-label');
 
     function updateSpotRateToggle() {
       var on = !!(spotRateEnabledCb && spotRateEnabledCb.checked);
@@ -113,6 +104,7 @@
       }
       if (spotRateFields) {
         spotRateFields.style.display = on ? 'block' : 'none';
+        spotRateFields.setAttribute('aria-hidden', on ? 'false' : 'true');
       }
     }
 
@@ -121,26 +113,27 @@
       if (spotTargetLabel) spotTargetLabel.textContent = 'Target application rate (' + unit + ')';
     }
 
-    if (spotRateLabel) {
-      spotRateLabel.addEventListener('click', function(e) {
-        e.preventDefault();
-        if (spotRateEnabledCb) {
-          spotRateEnabledCb.checked = !spotRateEnabledCb.checked;
-          updateSpotRateToggle();
-        }
-      });
-    }
     if (spotRateEnabledCb) spotRateEnabledCb.addEventListener('change', updateSpotRateToggle);
     if (spotRateUnitSel) spotRateUnitSel.addEventListener('change', updateSpotRateUnitLabels);
 
     updateSpotRateToggle();
+    updateSpotRateUnitLabels();
     resetToReady();
+
+    async function readJson(response, context) {
+      var text = await response.text();
+      try {
+        return text ? JSON.parse(text) : {};
+      } catch (error) {
+        throw new Error(context + ' returned an invalid response (HTTP ' + response.status + ').');
+      }
+    }
 
     // ── Polling Celery worker ───────────────────────────────────────────────
     async function pollWorker(id) {
       for (;;) {
         var response = await fetch('/api/workers/check/' + encodeURIComponent(id), { credentials: 'same-origin' });
-        var result = await response.json();
+        var result = await readJson(response, 'Worker status');
         if (!response.ok) throw new Error(result.error || ('Worker status HTTP ' + response.status));
         if (result.error) throw new Error(result.error);
         if (result.canceled) throw new Error('Analysis was canceled.');
@@ -190,13 +183,18 @@
         var ratePlan = null;
         var rateOn = rateEnabledCb && rateEnabledCb.checked;
         if (rateOn) {
-          var productName = (document.querySelector('#osw-product-name') || {}).value || '';
+          var productName = (form.querySelector('#osw-product-name') || {}).value || '';
           var rateUnit    = rateUnitSel ? rateUnitSel.value : 'KG_HA';
-          var strategy    = (document.querySelector('#osw-rate-strategy') || {}).value || 'direct';
-          var rateBasis   = (document.querySelector('#osw-rate-basis') || {}).value || 'product';
-          var minRate     = parseFloat((document.querySelector('#osw-min-rate') || {}).value) || 0;
-          var maxRate     = parseFloat((document.querySelector('#osw-max-rate') || {}).value) || 0;
-          var approvedBy  = (document.querySelector('#osw-approved-by') || {}).value || 'Operator';
+          var strategy    = (form.querySelector('#osw-rate-strategy') || {}).value || 'direct';
+          var rateBasis   = (form.querySelector('#osw-rate-basis') || {}).value || 'product';
+          var minRate     = Number((form.querySelector('#osw-min-rate') || {}).value);
+          var maxRate     = Number((form.querySelector('#osw-max-rate') || {}).value);
+          var approvedBy  = ((form.querySelector('#osw-approved-by') || {}).value || '').trim();
+          if (!Number.isFinite(minRate) || minRate < 0 || !Number.isFinite(maxRate) || maxRate <= 0) {
+            throw new Error('Enter valid fertilizer rates; maximum rate must be greater than zero.');
+          }
+          if (maxRate < minRate) throw new Error('Maximum fertilizer rate cannot be lower than minimum rate.');
+          if (!approvedBy) throw new Error('Enter the person who approved the fertilizer rate plan.');
           ratePlan = {
             mode: 'physical',
             operation: 'fertilizer',
@@ -213,10 +211,14 @@
         var spotRatePlan = null;
         var spotRateOn = spotRateEnabledCb && spotRateEnabledCb.checked;
         if (spotRateOn) {
-          var spotProductName = (document.querySelector('#osw-spot-product-name') || {}).value || '';
+          var spotProductName = (form.querySelector('#osw-spot-product-name') || {}).value || '';
           var spotRateUnit    = spotRateUnitSel ? spotRateUnitSel.value : 'L_HA';
-          var spotTargetRate  = parseFloat((document.querySelector('#osw-spot-target-rate') || {}).value) || 0;
-          var spotApprovedBy  = (document.querySelector('#osw-spot-approved-by') || {}).value || 'Operator';
+          var spotTargetRate  = Number((form.querySelector('#osw-spot-target-rate') || {}).value);
+          var spotApprovedBy  = ((form.querySelector('#osw-spot-approved-by') || {}).value || '').trim();
+          if (!Number.isFinite(spotTargetRate) || spotTargetRate <= 0) {
+            throw new Error('Enter a spot-spray target rate greater than zero.');
+          }
+          if (!spotApprovedBy) throw new Error('Enter the person who approved the spot-spray rate plan.');
           spotRatePlan = {
             mode: 'physical',
             operation: 'spray',
@@ -269,11 +271,12 @@
           });
         }
 
-        var result = await response.json();
+        var result = await readJson(response, 'Analysis request');
         if (!response.ok || result.error) {
           throw new Error(result.error || ('Request HTTP ' + response.status));
         }
 
+        if (!result.celery_task_id) throw new Error('The server did not return a worker task ID.');
         if (button) button.textContent = 'Starting worker…';
         await pollWorker(result.celery_task_id);
 

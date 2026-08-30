@@ -18,7 +18,7 @@ The plugin declares its Python dependencies in `orthoswift/requirements.txt`; We
 
 ### Install the release ZIP
 
-1. Download `orthoswift-webodm-plugin-v1.0.2.zip` from the GitHub release.
+1. Download `orthoswift-webodm-plugin-v1.0.3.zip` from the GitHub release.
 2. In WebODM, open **Administration → Plugins**.
 3. Select **Load Plugin (.zip)** and upload the ZIP.
 4. Enable **OrthoSWIFT**. WebODM installs the declared Python dependencies.
@@ -42,6 +42,10 @@ git clone https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm.git
 4. Run the analysis and download `orthoswift-deliverables.zip`.
 
 The existing interface is self-contained in `orthoswift/templates/index.html`.
+
+## Troubleshooting the analysis form
+
+If the rate-plan switches or **Run analysis** button do not respond, confirm that the plugin page extends WebODM's plugin base template and that `public/main.js` and `public/style.css` load successfully in the browser. This release includes regression coverage for that integration contract. After upgrading, restart the WebODM application service and hard-refresh the page so cached plugin assets are replaced.
 
 ## Input contract
 
@@ -135,4 +139,4 @@ Issues: https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm/issues
 
 ## Version
 
-1.0.2
+1.0.3
