@@ -131,6 +131,7 @@ def _job_file(file_path_str, plugin_path, python_packages_path, params, progress
     import shutil
     import sys
     import tempfile
+    import time
     import zipfile
     logger = logging.getLogger("orthoswift.webodm.worker")
 
@@ -140,6 +141,23 @@ def _job_file(file_path_str, plugin_path, python_packages_path, params, progress
             sys.path.insert(0, import_path)
     try:
         import rasterio
+
+        # WebODM serves worker result files by path and does not remove plugin-created
+        # temporary directories after download. Bound accumulation from prior upload
+        # jobs while leaving recent results available for retries.
+        temp_root = pathlib.Path(tempfile.gettempdir()).resolve()
+        expiry = time.time() - (24 * 60 * 60)
+        for stale_dir in temp_root.glob("orthoswift_result_*"):
+            try:
+                if (
+                    stale_dir.is_dir()
+                    and not stale_dir.is_symlink()
+                    and stale_dir.stat().st_mtime < expiry
+                ):
+                    shutil.rmtree(stale_dir, ignore_errors=True)
+            except OSError:
+                logger.debug("Could not inspect stale result directory %s", stale_dir)
+
         input_path = pathlib.Path(file_path_str).resolve()
         if not input_path.is_file():
             raise FileNotFoundError(f"Uploaded file not found: {input_path}")
@@ -234,6 +252,8 @@ def _job_file(file_path_str, plugin_path, python_packages_path, params, progress
         logger.exception("OrthoSWIFT WebODM worker failed on uploaded file")
         if "work_dir" in locals():
             shutil.rmtree(work_dir, ignore_errors=True)
+        if "result_dir" in locals():
+            shutil.rmtree(result_dir, ignore_errors=True)
         return {"error": "OrthoSWIFT processing failed", "error_type": "processing_error"}
 
 

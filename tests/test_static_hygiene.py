@@ -59,3 +59,32 @@ def test_offline_basemap_option_is_wired_to_both_request_formats():
     assert "offline_basemap: offlineBasemap" in controller
     assert "uploadData.append('offline_basemap', 'true')" not in controller
     assert "offline_basemap: true" not in controller
+
+
+def test_repository_has_no_patch_artifacts_or_retired_guide():
+    assert not list(ROOT.glob("*.patch"))
+    assert not (ROOT / "orthoswift/core/guide.py").exists()
+    assert "*.patch" in (ROOT / ".gitignore").read_text(encoding="utf-8")
+
+
+def test_release_workflow_publishes_only_immutable_version_tags():
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert 'branches:' not in workflow
+    assert 'tags:' in workflow
+    assert 'test "$GITHUB_REF_NAME" = "v$VERSION"' in workflow
+    assert "gh release delete" not in workflow
+    assert "--verify-tag" in workflow
+
+
+def test_methodology_matches_the_public_agriculture_scope(tmp_path):
+    from orthoswift.core.exports import export_analytics_methodology
+
+    path = export_analytics_methodology(tmp_path / "methodology.json", domain="agriculture")
+    methodology = json.loads(path.read_text(encoding="utf-8"))
+    assert methodology["domain"] == "agriculture"
+    assert "fertilizer_prescription" in methodology["methods"]
+    assert "spot_spray_targets" in methodology["methods"]
+    stale = json.dumps(methodology).lower()
+    assert "plant_density" not in stale
+    assert "replant" not in stale
+    assert "inspection, construction, and mining" not in stale

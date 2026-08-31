@@ -2,18 +2,23 @@ name: release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: orthoswift-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,34 +35,37 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r orthoswift/requirements.txt pytest ruff bandit
 
-      - name: Run Test Suite
+      - name: Run test suite
         run: python -m pytest -q
 
-      - name: Run Lint and Security Audits
+      - name: Run lint and security audits
         run: |
-          python -m ruff check orthoswift tests --select E9,F
+          python -m ruff check orthoswift tests build_release.py --select E9,F,I
           python -m bandit -q -r orthoswift -x tests -lll
 
-      - name: Extract Version
+      - name: Extract and validate version
         id: get_version
+        shell: bash
         run: |
-          VERSION=$(python -c "import runpy; g=runpy.run_path('orthoswift/version.py'); print(g.get('__version__', '1.0.0'))")
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          set -euo pipefail
+          VERSION=$(python -c "import runpy; print(runpy.run_path('orthoswift/version.py')['__version__'])")
+          MANIFEST_VERSION=$(python -c "import json; print(json.load(open('orthoswift/manifest.json'))['version'])")
+          test "$VERSION" = "$MANIFEST_VERSION"
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            test "$GITHUB_REF_NAME" = "v$VERSION"
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Detected plugin version: $VERSION"
 
-      - name: Package WebODM Plugin Release ZIP
-        run: |
-          python build_release.py
-          ZIP_NAME="orthoswift-webodm-plugin-v${{ steps.get_version.outputs.VERSION }}.zip"
-          echo "ZIP_FILE=dist/$ZIP_NAME" >> $GITHUB_ENV
-          echo "SHA_FILE=dist/$ZIP_NAME.sha256" >> $GITHUB_ENV
+      - name: Package WebODM plugin release ZIP
+        run: python build_release.py
 
-      - name: Verify Checksums
+      - name: Verify checksums
         run: |
           cd dist
           sha256sum --check *.sha256
 
-      - name: Upload Workflow Artifacts
+      - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
         with:
           name: orthoswift-webodm-plugin-v${{ steps.get_version.outputs.VERSION }}
@@ -65,21 +73,17 @@ jobs:
             dist/*.zip
             dist/*.sha256
 
-      - name: Publish GitHub Release
+      - name: Publish immutable GitHub release
+        if: github.ref_type == 'tag'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          TAG="v${{ steps.get_version.outputs.VERSION }}"
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
           TITLE="OrthoSWIFT WebODM Plugin $TAG"
-          echo "Publishing release $TAG from commit $GITHUB_SHA"
-          ls -la dist/
-
-          # Delete stale release + tag so we can recreate cleanly (idempotent)
-          gh release delete "$TAG" --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
-
-          # Create release — --target creates the git tag at this commit if it doesn't exist
           gh release create "$TAG" dist/*.zip dist/*.sha256 \
+            --verify-tag \
             --title "$TITLE" \
             --generate-notes \
-            --target "$GITHUB_SHA" \
             --repo "$GITHUB_REPOSITORY"

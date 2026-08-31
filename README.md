@@ -1,5 +1,9 @@
 # OrthoSWIFT Plugin for WebODM
 
+[![Tests](https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm/actions/workflows/tests.yml/badge.svg)](https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm/actions/workflows/tests.yml)
+[![Latest release](https://img.shields.io/github/v/release/Nyasha-Shekede/orthoswift-plugin-webodm)](https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 OrthoSWIFT turns a georeferenced multispectral orthomosaic into vegetation-index rasters, management zones, stress-hotspot review layers, controller prescription packages, and farmer-facing PDF deliverables inside WebODM.
 
 ## Status
@@ -18,7 +22,7 @@ The plugin declares its Python dependencies in `orthoswift/requirements.txt`; We
 
 ### Install the release ZIP
 
-1. Download `orthoswift-webodm-plugin-v1.0.3.zip` from the GitHub release.
+1. Download `orthoswift-webodm-plugin-v1.0.4.zip` from the GitHub release.
 2. In WebODM, open **Administration → Plugins**.
 3. Select **Load Plugin (.zip)** and upload the ZIP.
 4. Enable **OrthoSWIFT**. WebODM installs the declared Python dependencies.
@@ -105,11 +109,11 @@ The tests cover rate-plan validation, controller package generation, runner conf
 
 ## Repository scope
 
-The public plugin contains the agriculture pipeline used by the visible WebODM interface. Unreachable plant-counting, reseeding, inter-row weed, DSM/DTM, inspection, flight-mission, and disabled-stub code has been removed. The user-facing template, stylesheet, and active agriculture report/guide wording are retained.
+The public plugin contains the agriculture pipeline used by the visible WebODM interface. Unreachable plant-counting, reseeding, inter-row weed, DSM/DTM, inspection, flight-mission, and disabled-stub code has been removed. The user-facing template, stylesheet, agriculture pipeline, and prescription-report wording are retained.
 
 ## Publishing and review
 
-Publish the source repository and create a tagged GitHub release containing `orthoswift-plugin-webodm.zip`. For WebODM review, send the repository URL and release ZIP to the maintainer, together with:
+Publish the source repository and create a tagged GitHub release containing `orthoswift-webodm-plugin.zip`. For WebODM review, send the repository URL and release ZIP to the maintainer, together with:
 
 - supported WebODM version;
 - installation steps;
@@ -139,4 +143,4 @@ Issues: https://github.com/Nyasha-Shekede/orthoswift-plugin-webodm/issues
 
 ## Version
 
-1.0.3
+1.0.4

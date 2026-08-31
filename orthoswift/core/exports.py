@@ -310,70 +310,58 @@ def export_polygons_kml(
     return out_kml
 
 def export_analytics_methodology(out_path: str | Path, *, domain: str) -> Path:
-    """Write a concise machine-readable methodology/citation manifest for analytics with legal disclaimers."""
+    """Write the agriculture analytics methodology and operating limitations."""
+    if domain != "agriculture":
+        raise ValueError("Only the agriculture methodology is available")
+
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    refs = {
-        "Horn_1981": "Horn BKP. Hill shading and the reflectance map. Proceedings of the IEEE. 1981;69(1):14-47.",
-        "MacQueen_1967": "MacQueen J. Some methods for classification and analysis of multivariate observations. Proc 5th Berkeley Symp.",
-        "Rouse_1974": "Rouse JW et al. Monitoring vegetation systems in the Great Plains with ERTS. NASA SP-351. 1974.",
-        "Serra_1982": "Serra J. Image Analysis and Mathematical Morphology. Academic Press. 1982.",
-    }
-    
-    common_disclaimers = {
-        "general": "OrthoSWIFT generates machine-readable decision-support files for agriculture, inspection, construction, and mining workflows. These files are derived deterministically from analytic layers and exported in open formats for review, import testing, and operator-controlled execution. They are NOT autonomous approvals, legal certifications, engineering designs, agronomic prescriptions by a licensed professional, flight authorizations, or substitutes for field verification.",
-        "quality_boundaries": "Decision-support outputs can degrade or become unsafe when imported blindly into external equipment. Users must verify coordinate systems, geometry alignment, units, controller import behavior, machine calibration, field conditions, and regulatory compliance before operational use. OrthoSWIFT outputs are deterministic and auditable, but deterministic does not mean certified, safe, legal, or agronomically correct for every site or machine.",
-        "methodology_json": "Every job that produces decision-support outputs includes this methodology.json artifact in the decisions/ delivery folder. This file documents the parameters, equations, command semantics, and references used to generate the outputs.",
-    }
-    
     methods = {
-        "domain": "agriculture_analytics",
+        "schema": "orthoswift.analytics_methodology.v1",
+        "domain": "agriculture",
         "deterministic": True,
-        "disclaimer": common_disclaimers["general"],
-        "equations": [
-            "NDVI = (NIR - R) / (NIR + R)",
-            "NDRE = (NIR - RE) / (NIR + RE)",
-            "GLI = (2G - R - B) / (2G + R + B)",
-            "canopy_cover = (vegetation_pixels / valid_pixels) * 100",
-            "plant_mask = (NDVI >= max(configured_floor, Otsu_threshold)) AND (MSAVI2 >= configured_floor)",
-            "plant_density_per_ha = accepted_connected_components / observed_valid_area_ha",
-            "row_periodicity = abs(mean(exp(i * 2*pi*cross_row_coordinate / expected_row_spacing)))",
-            "in_row_gap_candidate = interior adjacent-object gap >= configured_ratio * expected_inrow_spacing",
-            "stand_shortfall_status = SCOUT_LOW_STAND when local valid coverage passes and observed row-associated density is below configured target percentage",
-            "vra_index = 1 - ((index_i - index_min) / (index_max - index_min))",
-            "TargetRate = 100 * vra_index (relative mode)",
-            "TargetRate = min_rate + vra_index * (max_rate - min_rate) or exact operator-supplied zone rate (physical mode)",
-        ],
-        "decision_outputs": {
-            "vra_prescription": {
-                "description": "Variable-rate application files support either an imagery-derived relative 0-100% intensity or an explicit operator/agronomist-supplied physical rate plan. Physical mode records product, rate basis, unit, strategy or exact zone rates, equipment bounds, and approver; it never infers dose from imagery.",
-                "warning": "Relative mode requires downstream mapping to approved physical rates. Physical mode only spatially encodes supplied rates; users must verify product, units, controller interpretation, equipment calibration, field boundaries, labels, and legal compliance before application.",
-            },
-            "stand_screening": {
-                "description": "Optional early-season multispectral screening. Counts isolated NDVI/MSAVI2 vegetation components inside an operator-supplied AOI after configured resolution, coverage, separability, canopy-cover, physical-size, and optional row-periodicity gates.",
-                "warning": "Counts vegetation objects, not crop identity. Weeds may pass; touching plants may merge; fragmented plants may split. Validate crop/stage/sensor protocols against independent manual counts before stand or replant decisions.",
-            },
-            "stand_action_candidates": {
-                "description": "Optional conservative layers derived only after a row model passes: interior in-row gap candidates, off-row vegetation candidates, and local stand-shortfall scouting zones.",
-                "warning": "These are not definitive planter skips, weed diagnoses, or replant prescriptions. Fully missing rows and row-end gaps are not detected. Curved/multiple-orientation rows require a different validated model.",
-            },
-            "spot_spray_mission": {
-                "description": "Optional/export-disabled by default. Agriculture pipeline exports review geometry only (stress-hotspot polygons as GeoJSON) unless a separate operator-reviewed mission export workflow is explicitly enabled and validated. The underlying hotspot geometry remains available for downstream tooling.",
-                "warning": "Mission file generation is intentionally gated. Any derived flight plan MUST be independently reviewed and validated in the target flight-planning environment before flight. Aircraft firmware, payload behaviour, local airspace, obstacles, weather, pilot certification, and chemical-application legality remain solely the operator's responsibility. OrthoSWIFT does not generate or endorse autonomous spray missions.",
-            },
+        "methods": {
+            "vegetation_indices": [
+                "NDVI = (NIR - R) / (NIR + R)",
+                "NDRE = (NIR - RE) / (NIR + RE)",
+                "GLI = (2G - R - B) / (2G + R + B)",
+                "MSAVI2 = (2NIR + 1 - sqrt((2NIR + 1)^2 - 8(NIR - R))) / 2",
+            ],
+            "management_zones": (
+                "Valid vegetation-index pixels are clustered into the requested number "
+                "of relative-vigor zones and converted to reviewable polygons."
+            ),
+            "fertilizer_prescription": (
+                "Relative mode maps zone vigor to 0-100% intensity. Physical mode only "
+                "spatially encodes rates supplied and approved by the operator or agronomist."
+            ),
+            "spot_spray_targets": (
+                "Low-NDVI connected regions are exported as relative stress targets for "
+                "ground scouting and optional operator-reviewed section control."
+            ),
         },
-        "references": refs,
+        "references": {
+            "MacQueen_1967": (
+                "MacQueen J. Some methods for classification and analysis of multivariate "
+                "observations. Proceedings of the Fifth Berkeley Symposium. 1967."
+            ),
+            "Rouse_1974": (
+                "Rouse JW et al. Monitoring vegetation systems in the Great Plains with "
+                "ERTS. NASA SP-351. 1974."
+            ),
+            "Serra_1982": (
+                "Serra J. Image Analysis and Mathematical Morphology. Academic Press. 1982."
+            ),
+        },
         "limitations": [
-            "Vegetation indices measure optical reflectance, not absolute biomass or nutrient concentration.",
-            "Stress hotspots are relative to the flight extent and require ground scouting for diagnosis.",
-            "Stand-screening thresholds and physical size bounds are protocol-specific and are not universal defaults.",
-            "Stand-shortfall zones are scouting priorities only; imagery alone does not determine replanting.",
+            "Vegetation indices measure optical reflectance, not crop identity, absolute biomass, nutrient deficiency, disease, or weed species.",
+            "Stress targets are relative to the analyzed flight and require ground scouting before treatment.",
+            "Relative prescription rates require mapping to an approved physical rate outside OrthoSWIFT.",
+            "Physical prescription rates originate from the named operator or agronomist; OrthoSWIFT does not infer agronomic dose.",
+            "DJI Agras archives are structurally validated exports, not firmware or controller certification.",
+            "Users must verify coordinate reference systems, geometry, units, controller interpretation, equipment calibration, labels, boundaries, field conditions, and legal compliance.",
         ],
-        "quality_boundaries": common_disclaimers["quality_boundaries"],
-        "methodology_json": common_disclaimers["methodology_json"],
+        "artifact_location": "technical_gis/data_summaries/analytics_methodology.json",
     }
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(methods, f, indent=2)
-        
+    out_path.write_text(json.dumps(methods, indent=2), encoding="utf-8")
     return out_path

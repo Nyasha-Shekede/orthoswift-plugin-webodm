@@ -59,7 +59,7 @@ def main() -> None:
                 if path.suffix in EXCLUDED_SUFFIXES or name.startswith("."):
                     continue
                 archive.write(path, path.relative_to(root).as_posix())
-        for name in ("LICENSE", "README.md", "SECURITY.md", "CONTRIBUTING.md"):
+        for name in ("LICENSE", "README.md", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md"):
             path = root / name
             if path.is_file():
                 archive.write(path, f"orthoswift/{name}")

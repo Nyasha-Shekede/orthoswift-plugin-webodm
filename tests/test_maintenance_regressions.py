@@ -17,7 +17,7 @@ def test_worker_import_bootstrap_has_no_namespace_patching_or_bare_fallbacks():
 
 
 def test_core_imports_do_not_silence_third_party_loggers():
-    for relative in ("orthoswift/core/pipeline.py", "orthoswift/core/guide.py"):
+    for relative in ("orthoswift/core/pipeline.py", "orthoswift/core/report.py"):
         source = (ROOT / relative).read_text(encoding="utf-8")
         tree = ast.parse(source)
         calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
@@ -49,6 +49,8 @@ def test_release_builder_outputs_self_consistent_archives(tmp_path):
         assert {name.split("/")[0] for name in archive.namelist()} == {"orthoswift"}
         assert "orthoswift/manifest.json" in archive.namelist()
         assert "orthoswift/requirements.txt" in archive.namelist()
+        assert "orthoswift/CHANGELOG.md" in archive.namelist()
+        assert "orthoswift/core/guide.py" not in archive.namelist()
 
 
 def test_manifest_points_to_this_repository():

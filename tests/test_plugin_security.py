@@ -66,3 +66,10 @@ def test_plugin_manifest_and_assets_are_consistent():
     assert manifest['repository'].startswith('https://github.com/')
     assert (root/'orthoswift/public/main.js').exists()
     assert (root/'orthoswift/templates/index.html').exists()
+
+
+def test_uploaded_worker_bounds_temporary_result_accumulation():
+    source = (Path(__file__).parents[1] / "orthoswift/plugin.py").read_text(encoding="utf-8")
+    assert 'temp_root.glob("orthoswift_result_*")' in source
+    assert "not stale_dir.is_symlink()" in source
+    assert 'if "result_dir" in locals()' in source

@@ -33,7 +33,6 @@ from .decisions import (
     resolve_application_rate_plan,
 )
 from .exports import export_analytics_methodology, export_polygons_kml, write_raster
-from .guide import export_guides
 from .report import build_agriculture_pdf
 from .vegetation import (
     canopy_cover_summary,
@@ -548,7 +547,7 @@ def _validate_spectral_arrays(arrays, reflectance_scale, warnings, band_audit):
             "Absolute-reflectance gate failed: " + reason + ". "
             "NDVI/NDRE remain available because normalized differences are "
             "invariant to a common multiplicative scale; MSAVI2, absolute NIR "
-            "shadow screening, plant counting, and machine prescription export "
+            "shadow screening, and machine prescription export "
             "are disabled."
         )
     return valid
@@ -1461,7 +1460,7 @@ def _build_report_and_audit(
         disclaimer_notes.append(
             "RADIOMETRIC CALIBRATION NOTICE: Spectral inputs for this flight were uncalibrated raw digital numbers. "
             "NDVI/NDRE relative health maps are included for visual field review, but absolute products "
-            "(MSAVI2, plant counting, NIR shadow screening, and machine controller prescriptions) were disabled "
+            "(MSAVI2, NIR shadow screening, and machine controller prescriptions) were disabled "
             "to prevent inaccurate field application."
         )
     if zoning_used_full_footprint_fallback:
@@ -1490,8 +1489,6 @@ def _build_report_and_audit(
         ),
     )
     outputs["pdf_report"] = str(pdf_path)
-
-    export_guides(out_dir)
 
     input_audit_path = summaries_dir / "input_band_audit.json"
     _write_json(input_audit_path, band_audit)
